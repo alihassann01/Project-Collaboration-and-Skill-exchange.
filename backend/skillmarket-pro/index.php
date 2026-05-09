@@ -72,13 +72,15 @@ $router->add('PATCH',  '/api/skill-swap/{id}/toggle',            fn($p) => (new 
 $router->add('DELETE', '/api/skill-swap/{id}',                   fn($p) => (new SkillSwapController)->destroy((int)$p['id']));
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
-$router->add('GET',  '/api/messages',      fn()   => (new MessageController)->index());
-$router->add('GET',  '/api/messages/{id}', fn($p) => (new MessageController)->show((int)$p['id']));
-$router->add('POST', '/api/messages/start', fn()   => (new MessageController)->startConversation());
-$router->add('POST', '/api/messages/{id}', fn($p) => (new MessageController)->send((int)$p['id']));
+$router->add('GET',  '/api/messages',              fn()   => (new MessageController)->index());
+$router->add('GET',  '/api/messages/unread-count', fn()   => (new MessageController)->unreadCount());
+$router->add('GET',  '/api/messages/{id}',         fn($p) => (new MessageController)->show((int)$p['id']));
+$router->add('POST', '/api/messages/start',        fn()   => (new MessageController)->startConversation());
+$router->add('POST', '/api/messages/{id}',         fn($p) => (new MessageController)->send((int)$p['id']));
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 $router->add('GET',  '/api/notifications',                fn()   => (new NotificationController)->index());
+$router->add('GET',  '/api/notifications/unread-count',   fn()   => (new NotificationController)->unreadCount());
 $router->add('POST', '/api/notifications/mark-all-read',  fn()   => (new NotificationController)->markAllRead());
 $router->add('POST', '/api/notifications/{id}/read',      fn($p) => (new NotificationController)->markRead((int)$p['id']));
 
@@ -100,6 +102,7 @@ $router->add('PATCH',  '/api/admin/users/{id}/toggle',     fn($p) => AdminContro
 $router->add('DELETE', '/api/admin/users/{id}',            fn($p) => AdminController::deleteUser((int)$p['id']));
 $router->add('GET',    '/api/admin/projects',              fn()   => AdminController::projects());
 $router->add('PATCH',  '/api/admin/projects/{id}/close',   fn($p) => AdminController::closeProject((int)$p['id']));
+$router->add('PATCH',  '/api/admin/projects/{id}/reopen',  fn($p) => AdminController::reopenProject((int)$p['id']));
 $router->add('DELETE', '/api/admin/projects/{id}',         fn($p) => AdminController::deleteProject((int)$p['id']));
 $router->add('GET',    '/api/admin/reports',               fn()   => AdminController::reports());
 

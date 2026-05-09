@@ -40,6 +40,15 @@ class ApplicationController
             [$projectId, $user->id, $coverLetter]
         );
 
+        // Notify the employer about the new application
+        createNotification(
+            (int)$project->employer_id,
+            'application',
+            'New Application Received',
+            "{$user->name} applied to your project: {$project->title}",
+            '/my-projects'
+        );
+
         $application = DB::queryOne('SELECT * FROM applications WHERE id = ?', [$id]);
         Response::success($application, 'Application submitted successfully.', 201);
     }
@@ -55,7 +64,7 @@ class ApplicationController
             "SELECT a.*,
                     p.title AS project_title, p.status AS project_status,
                     p.skills_required, p.deadline,
-                    u.name AS employer_name
+                    u.id AS employer_id, u.name AS employer_name
              FROM applications a
              JOIN projects p ON p.id = a.project_id
              JOIN users u ON u.id = p.employer_id
@@ -122,6 +131,45 @@ class ApplicationController
         }
 
         DB::execute('UPDATE applications SET status = ? WHERE id = ?', [$status, $id]);
+
+        // Fetch student info for notifications
+        $student = DB::queryOne('SELECT * FROM users WHERE id = ?', [$application->student_id]);
+
+        if ($status === 'approved') {
+            // Update project to in_progress and assign the hired student
+            DB::execute(
+                'UPDATE projects SET status = "in_progress", hired_student_id = ?, accepted_at = NOW(), updated_at = NOW() WHERE id = ?',
+                [$application->student_id, $project->id]
+            );
+
+            // Notify the student that their application was approved
+            createNotification(
+                (int)$application->student_id,
+                'application',
+                'Application Approved!',
+                "Congratulations! Your application for \"{$project->title}\" has been approved. You can start working now.",
+                '/my-applications'
+            );
+
+            // Notify the employer (self-confirmation)
+            $studentName = $student ? $student->name : 'A student';
+            createNotification(
+                (int)$user->id,
+                'application',
+                'Student Assigned',
+                "You have assigned {$studentName} to \"{$project->title}\". Project is now in progress.",
+                '/my-projects'
+            );
+        } elseif ($status === 'rejected') {
+            // Notify the student about the rejection
+            createNotification(
+                (int)$application->student_id,
+                'application',
+                'Application Update',
+                "Thank you for applying to \"{$project->title}\". Unfortunately, this position has been filled. Keep applying!",
+                '/my-applications'
+            );
+        }
 
         $application = DB::queryOne('SELECT * FROM applications WHERE id = ?', [$id]);
         Response::success($application, 'Application status updated.');

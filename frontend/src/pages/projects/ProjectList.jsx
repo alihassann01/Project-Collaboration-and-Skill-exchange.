@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { Search, Plus, X } from 'lucide-react'
+import { Search, Plus, X, ArrowUpDown } from 'lucide-react'
 import { getProjects } from '../../api/projects'
 import { useAuth } from '../../context/AuthContext'
 import ProjectCard from '../../components/ProjectCard'
@@ -11,18 +11,21 @@ const PER_PAGE = 9
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-5 flex flex-col gap-3 animate-pulse">
-      <div className="flex justify-between gap-2">
-        <div className="h-5 bg-slate-200 rounded-lg w-3/4" />
-        <div className="h-5 bg-slate-200 rounded-full w-14" />
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-card overflow-hidden">
+      <div className="p-5 flex flex-col gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl skeleton" />
+          <div className="h-3 skeleton w-24" />
+        </div>
+        <div className="h-5 skeleton rounded-lg w-4/5" />
+        <div className="flex gap-1.5">
+          {[1,2,3].map(i => <div key={i} className="h-6 skeleton rounded-full w-16" />)}
+        </div>
+        <div className="h-3 skeleton rounded w-1/3" />
       </div>
-      <div className="h-3 bg-slate-200 rounded w-1/3" />
-      <div className="flex gap-1.5">
-        {[1,2,3].map(i => <div key={i} className="h-5 bg-slate-200 rounded-full w-16" />)}
-      </div>
-      <div className="flex justify-between pt-2 border-t border-slate-50">
-        <div className="h-3 bg-slate-200 rounded w-28" />
-        <div className="h-3 bg-slate-200 rounded w-20" />
+      <div className="px-5 py-3 border-t border-slate-100 flex justify-between">
+        <div className="h-3 skeleton rounded w-20" />
+        <div className="h-3 skeleton rounded w-16" />
       </div>
     </div>
   )
@@ -36,10 +39,12 @@ export default function ProjectList() {
   const search = searchParams.get('search') || ''
   const status = searchParams.get('status') || ''
   const skill  = searchParams.get('skill')  || ''
+  const sort   = searchParams.get('sort')   || ''
 
   const [localSearch, setLocalSearch] = useState(search)
   const [localStatus, setLocalStatus] = useState(status)
   const [localSkill,  setLocalSkill]  = useState(skill)
+  const [localSort,   setLocalSort]   = useState(sort)
 
   const [projects,  setProjects]  = useState([])
   const [total,     setTotal]     = useState(0)
@@ -48,7 +53,7 @@ export default function ProjectList() {
 
   const fetchProjects = useCallback(() => {
     setFetching(true)
-    getProjects({ page, per_page: PER_PAGE, search, status, skill })
+    getProjects({ page, per_page: PER_PAGE, search, status, skill, sort })
       .then(res => {
         const d = res.data.data
         setProjects(d.data ?? [])
@@ -61,7 +66,7 @@ export default function ProjectList() {
         toast.error(msg)
       })
       .finally(() => setFetching(false))
-  }, [page, search, status, skill])
+  }, [page, search, status, skill, sort])
 
   useEffect(() => { fetchProjects() }, [fetchProjects])
 
@@ -69,6 +74,7 @@ export default function ProjectList() {
     setLocalSearch(searchParams.get('search') || '')
     setLocalStatus(searchParams.get('status') || '')
     setLocalSkill(searchParams.get('skill')   || '')
+    setLocalSort(searchParams.get('sort')     || '')
   }, [searchParams])
 
   function applyFilters(e) {
@@ -77,12 +83,13 @@ export default function ProjectList() {
     if (localSearch.trim()) p.search = localSearch.trim()
     if (localStatus)        p.status = localStatus
     if (localSkill.trim())  p.skill  = localSkill.trim()
+    if (localSort)          p.sort   = localSort
     p.page = '1'
     setSearchParams(p)
   }
 
   function clearFilters() {
-    setLocalSearch(''); setLocalStatus(''); setLocalSkill('')
+    setLocalSearch(''); setLocalStatus(''); setLocalSkill(''); setLocalSort('')
     setSearchParams({})
   }
 
@@ -91,22 +98,17 @@ export default function ProjectList() {
     setSearchParams({ ...p, page: String(n) })
   }
 
-  const hasFilters = search || status || skill
+  const hasFilters = search || status || skill || sort
 
   return (
     <div className="animate-fade-up space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-sm">
-            Browse Opportunities
-          </span>
-          <h1 className="font-display text-2xl font-700 text-slate-900">Projects</h1>
-          {!fetching && (
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">
-              {total} result{total !== 1 ? 's' : ''}
-            </span>
-          )}
+        <div>
+          <h1 className="font-display text-2xl font-bold text-slate-900">Browse Projects</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Find your next opportunity{!fetching && <> · <span className="font-semibold text-slate-700">{total}</span> project{total !== 1 ? 's' : ''} available</>}
+          </p>
         </div>
         {user?.role === 'employer' && (
           <Link to="/projects/create">
@@ -161,6 +163,22 @@ export default function ProjectList() {
               hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-400
               focus:border-brand-400 focus:bg-white transition-all"
           />
+        </div>
+
+        <div className="flex flex-col gap-1 min-w-[140px]">
+          <label className="text-xs font-medium text-slate-500">Sort By</label>
+          <select
+            value={localSort}
+            onChange={e => setLocalSort(e.target.value)}
+            className="px-3 py-2.5 rounded-xl text-sm bg-slate-50 border border-slate-200
+              hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-400
+              focus:border-brand-400 focus:bg-white transition-all cursor-pointer"
+          >
+            <option value="">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="budget_high">Budget (High→Low)</option>
+            <option value="deadline">Deadline (Soonest)</option>
+          </select>
         </div>
 
         <div className="flex gap-2 items-center">

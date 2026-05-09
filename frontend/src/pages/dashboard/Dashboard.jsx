@@ -17,17 +17,17 @@ import Button from '../../components/ui/Button'
 
 // ─── Skeleton loader ────────────────────────────────────────────────────────
 function Skeleton({ className = '' }) {
-  return <div className={`animate-pulse bg-slate-200 rounded-xl ${className}`} />
+  return <div className={`skeleton ${className}`} />
 }
 
 function DashboardSkeleton() {
   return (
     <div className="animate-fade-up space-y-6">
-      <Skeleton className="h-8 w-64" />
+      <div className="h-40 skeleton rounded-3xl" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
       </div>
-      <Skeleton className="h-64" />
+      <div className="h-64 skeleton rounded-2xl" />
     </div>
   )
 }
@@ -41,9 +41,9 @@ function PublicDashboard() {
         <div className="grid-pattern absolute inset-0" />
         <div className="absolute inset-0 bg-gradient-radial from-brand-600/30 via-transparent to-transparent" />
         <div className="relative z-10">
-          <h1 className="font-display text-4xl sm:text-5xl font-700 text-white tracking-tight leading-tight max-w-2xl mx-auto">
+          <h1 className="font-display text-4xl sm:text-5xl font-bold text-white tracking-tight leading-tight max-w-2xl mx-auto">
             Find Projects.{' '}
-            <span className="text-brand-300">Share Skills.</span>{' '}
+            <span className="bg-gradient-to-r from-emerald-300 to-brand-300 bg-clip-text text-transparent">Share Skills.</span>{' '}
             Grow Together.
           </h1>
           <p className="mt-4 text-slate-300 text-lg max-w-xl mx-auto">
@@ -88,7 +88,7 @@ function PublicDashboard() {
         ].map(({ icon, title, desc, bgClass }) => (
           <div key={title} className="bg-white rounded-2xl shadow-card border border-slate-100 p-6 text-center hover:shadow-card-hover transition-all group">
             <div className={`w-14 h-14 rounded-2xl ${bgClass} flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform`}>{icon}</div>
-            <h3 className="font-display font-700 text-slate-900 text-lg mb-1">{title}</h3>
+            <h3 className="font-display font-bold text-slate-900 text-lg mb-1">{title}</h3>
             <p className="text-slate-500 text-sm">{desc}</p>
           </div>
         ))}
@@ -117,25 +117,33 @@ function StudentDashboard({ data, name }) {
             <div className="inline-flex items-center gap-2 bg-white/15 rounded-xl px-3 py-1.5 mb-3">
               <span className="text-white/90 text-xs font-semibold">🎓 Student Dashboard</span>
             </div>
-            <h1 className="font-display text-2xl md:text-3xl font-700 text-white leading-tight">
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-white leading-tight">
               Welcome back, {name}! 👋
             </h1>
             <p className="text-white/70 text-sm mt-1">Track your applications and discover new opportunities.</p>
           </div>
           <Link to="/projects">
-            <button className="flex items-center gap-2 bg-white text-student-700 px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-student-50 transition-colors shadow-sm">
+            <button className="flex items-center gap-2 bg-white text-student-700 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-student-50 transition-all shadow-sm active:scale-[0.97]">
               Browse Projects <ArrowRight size={15} />
             </button>
           </Link>
         </div>
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards — Bug 7: wrapped in Links for navigation */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="My Applications" value={my_applications_count} icon={FileText}   color="sky"    />
-        <StatCard title="Approved"         value={approved_count}        icon={CheckCircle} color="green"  />
-        <StatCard title="Pending"          value={pending_count}         icon={Clock}       color="yellow" />
-        <StatCard title="Open Projects"    value={open_projects_count}   icon={Briefcase}   color="violet" />
+        <Link to="/my-applications" className="block hover:scale-[1.02] transition-transform">
+          <StatCard title="My Applications" value={my_applications_count} icon={FileText}   color="sky"    />
+        </Link>
+        <Link to="/my-applications" className="block hover:scale-[1.02] transition-transform">
+          <StatCard title="Approved"         value={approved_count}        icon={CheckCircle} color="green"  />
+        </Link>
+        <Link to="/my-applications" className="block hover:scale-[1.02] transition-transform">
+          <StatCard title="Pending"          value={pending_count}         icon={Clock}       color="yellow" />
+        </Link>
+        <Link to="/projects?status=open" className="block hover:scale-[1.02] transition-transform">
+          <StatCard title="Open Projects"    value={open_projects_count}   icon={Briefcase}   color="violet" />
+        </Link>
       </div>
 
       {/* Quick links */}
@@ -163,7 +171,7 @@ function StudentDashboard({ data, name }) {
       {/* Recent applications */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="font-display font-700 text-slate-900">Recent Applications</h2>
+          <h2 className="font-display font-bold text-slate-900">Recent Applications</h2>
           <Link to="/my-applications" className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors">
             View all →
           </Link>
@@ -190,7 +198,13 @@ function StudentDashboard({ data, name }) {
               <tbody>
                 {recent_applications.map((app, i) => (
                   <tr key={app.id ?? i} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-3 font-medium text-slate-800">{app.project_title}</td>
+                    <td className="px-6 py-3 font-medium text-slate-800">
+                      {app.project_id ? (
+                        <Link to={`/projects/${app.project_id}`} className="text-brand-600 hover:text-brand-700 hover:underline transition-colors">
+                          {app.project_title}
+                        </Link>
+                      ) : app.project_title}
+                    </td>
                     <td className="px-6 py-3"><StatusBadge status={app.status} /></td>
                     <td className="px-6 py-3 text-slate-500">
                       {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : '—'}
@@ -225,7 +239,7 @@ function EmployerDashboard({ data, name }) {
             <div className="inline-flex items-center gap-2 bg-white/15 rounded-xl px-3 py-1.5 mb-3">
               <span className="text-white/90 text-xs font-semibold">🏢 Employer Dashboard</span>
             </div>
-            <h1 className="font-display text-2xl md:text-3xl font-700 text-white leading-tight">
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-white leading-tight">
               Welcome back, {name}! 👋
             </h1>
             <p className="text-white/70 text-sm mt-1">Manage your projects and review incoming talent.</p>
@@ -238,17 +252,26 @@ function EmployerDashboard({ data, name }) {
         </div>
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards — Bug 7: wrapped in Links for navigation */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="My Projects"      value={my_projects_count}    icon={FolderOpen}  color="violet" />
-        <StatCard title="Total Applications" value={total_applications} icon={FileText}    color="green"  />
-        <StatCard title="Pending Review"   value={pending_applications} icon={Clock}       color="amber"  />
+        <Link to="/my-projects" className="block hover:scale-[1.02] transition-transform">
+          <StatCard title="My Projects"      value={my_projects_count}    icon={FolderOpen}  color="violet" />
+        </Link>
+        <Link to="/my-projects" className="block hover:scale-[1.02] transition-transform">
+          <StatCard title="Total Applications" value={total_applications} icon={FileText}    color="green"  />
+        </Link>
+        <Link to="/my-projects" className="block hover:scale-[1.02] transition-transform">
+          <StatCard title="Pending Review"   value={pending_applications} icon={Clock}       color="amber"  />
+        </Link>
       </div>
 
       {/* Recent projects */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h2 className="font-display font-700 text-slate-900">Recent Projects</h2>
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="font-display font-bold text-slate-900">Recent Projects</h2>
+          <Link to="/my-projects" className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors">
+            View all →
+          </Link>
         </div>
 
         {recent_projects.length === 0 ? (
@@ -311,45 +334,7 @@ function EmployerDashboard({ data, name }) {
   )
 }
 
-// ─── Admin dashboard ─────────────────────────────────────────────────────────
-function AdminDashboard({ data, name }) {
-  const {
-    total_users,
-    total_students,
-    total_employers,
-    total_projects,
-    open_projects,
-    total_applications,
-  } = data
-
-  return (
-    <div className="animate-fade-up space-y-6">
-      {/* Hero Banner */}
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 p-6 md:p-8">
-        <div className="grid-pattern absolute inset-0" />
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-2 bg-white/15 rounded-xl px-3 py-1.5 mb-3">
-            <span className="text-white/90 text-xs font-semibold">⚡ Admin Control Panel</span>
-          </div>
-          <h1 className="font-display text-2xl md:text-3xl font-700 text-white leading-tight">
-            Platform Overview
-          </h1>
-          <p className="text-white/70 text-sm mt-1">Monitor users, projects, and platform health.</p>
-        </div>
-      </div>
-
-      {/* 6 stat cards in 2 rows of 3 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <StatCard title="Total Users"        value={total_users}        icon={Users}        color="amber"  />
-        <StatCard title="Students"           value={total_students}     icon={GraduationCap} color="sky"   />
-        <StatCard title="Employers"          value={total_employers}    icon={Building2}    color="violet" />
-        <StatCard title="Total Projects"     value={total_projects}     icon={FolderOpen}   color="amber"  />
-        <StatCard title="Open Projects"      value={open_projects}      icon={Briefcase}    color="green"  />
-        <StatCard title="Applications"       value={total_applications} icon={FileText}     color="blue"   />
-      </div>
-    </div>
-  )
-}
+// Dead AdminDashboard component removed — admin role redirects to /admin page directly
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 export default function Dashboard() {

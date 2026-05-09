@@ -1,10 +1,30 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ArrowRight, ChevronDown } from 'lucide-react'
+import { ArrowRight, GraduationCap, Building2, Mail, Lock, User, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
+
+function PasswordStrength({ password }) {
+  const len = password.length
+  const strength = len === 0 ? 0 : len < 6 ? 1 : len < 8 ? 2 : len < 12 ? 3 : 4
+  const colors = ['bg-slate-200', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-emerald-500']
+  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong']
+  if (len === 0) return null
+  return (
+    <div className="mt-2">
+      <div className="flex gap-1">
+        {[1,2,3,4].map(i => (
+          <div key={i} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= strength ? colors[strength] : 'bg-slate-100'}`} />
+        ))}
+      </div>
+      <p className={`text-[10px] font-medium mt-1 ${strength <= 1 ? 'text-red-500' : strength <= 2 ? 'text-orange-500' : strength <= 3 ? 'text-yellow-600' : 'text-emerald-600'}`}>
+        {labels[strength]}
+      </p>
+    </div>
+  )
+}
 
 export default function Register() {
   const { register } = useAuth()
@@ -50,19 +70,24 @@ export default function Register() {
     }
   }
 
+  const isStudent = form.role === 'student'
+
   return (
     <div className="min-h-[calc(100vh-3.5rem)] flex">
       {/* Left branding panel — desktop only */}
       <div className="hidden md:flex md:w-5/12 lg:w-1/2 bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 relative overflow-hidden flex-col justify-between p-10">
         <div className="grid-pattern absolute inset-0 opacity-100" />
+        <div className="absolute top-20 right-10 w-64 h-64 bg-white/5 rounded-full blur-2xl animate-float" />
+        <div className="absolute bottom-32 left-10 w-48 h-48 bg-brand-400/10 rounded-full blur-2xl animate-float" style={{ animationDelay: '3s' }} />
+
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-10">
             <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
               <span className="text-white font-display text-base font-bold">S</span>
             </div>
-            <span className="font-display font-700 text-white text-lg">SkillMarket</span>
+            <span className="font-display font-bold text-white text-lg">SkillMarket</span>
           </div>
-          <h2 className="font-display text-3xl lg:text-4xl font-700 text-white leading-tight mb-4">
+          <h2 className="font-display text-3xl lg:text-4xl font-bold text-white leading-tight mb-4">
             Join 500+ students &amp; employers<br />already building their future.
           </h2>
           <p className="text-brand-200 text-base leading-relaxed max-w-sm">
@@ -95,81 +120,80 @@ export default function Register() {
             <div className="w-8 h-8 bg-brand-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-display text-sm font-bold">S</span>
             </div>
-            <span className="font-display font-700 text-slate-900 text-base">SkillMarket</span>
+            <span className="font-display font-bold text-slate-900 text-base">SkillMarket</span>
           </div>
 
           <div className="mb-7">
-            <h2 className="font-display text-2xl font-700 text-slate-900 tracking-tight">Create account</h2>
+            <h2 className="font-display text-2xl font-bold text-slate-900 tracking-tight">Create account</h2>
             <p className="text-slate-500 text-sm mt-1">Join SkillMarket for free</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-card border border-slate-100 p-7">
             <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-              <Input
-                label="Full name"
-                name="name"
-                autoComplete="name"
-                placeholder="Muhammad Ali"
-                value={form.name}
-                onChange={set('name')}
-                error={errors.name}
-              />
-              <Input
-                label="Email address"
-                type="email"
-                name="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={form.email}
-                onChange={set('email')}
-                error={errors.email}
-              />
-              <Input
-                label="Password"
-                type="password"
-                name="password"
-                autoComplete="new-password"
-                placeholder="Min. 8 characters"
-                value={form.password}
-                onChange={set('password')}
-                error={errors.password}
-              />
-              <Input
-                label="Confirm password"
-                type="password"
-                name="confirmPassword"
-                autoComplete="new-password"
-                placeholder="Repeat your password"
-                value={form.confirmPassword}
-                onChange={set('confirmPassword')}
-                error={errors.confirmPassword}
-              />
 
-              {/* Role selector */}
-              <div className="flex flex-col gap-1">
-                <label htmlFor="role" className="text-sm font-medium text-slate-700">I am a…</label>
-                <div className="relative">
-                  <select
-                    id="role"
-                    name="role"
-                    value={form.role}
-                    onChange={set('role')}
-                    className={`
-                      w-full appearance-none px-3.5 py-2.5 rounded-xl text-sm bg-slate-50
-                      border transition-all duration-150 cursor-pointer pr-9
-                      focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 focus:bg-white
-                      ${errors.role ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:border-slate-300'}
-                    `}
+              {/* Role Selection Cards */}
+              <div>
+                <label className="text-sm font-medium text-slate-700 mb-2 block">I am a…</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, role: 'student' }))}
+                    className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+                      isStudent
+                        ? 'border-student-500 bg-student-50 shadow-glow-student'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                    }`}
                   >
-                    <option value="student">🎓 Student — looking for projects &amp; skills</option>
-                    <option value="employer">🏢 Employer — posting projects &amp; hiring</option>
-                  </select>
-                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    {isStudent && (
+                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-student-500 flex items-center justify-center">
+                        <Check size={12} className="text-white" strokeWidth={3} />
+                      </div>
+                    )}
+                    <GraduationCap size={24} className={isStudent ? 'text-student-600' : 'text-slate-400'} />
+                    <p className={`font-semibold text-sm mt-2 ${isStudent ? 'text-student-700' : 'text-slate-700'}`}>Student</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">Find projects &amp; swap skills</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, role: 'employer' }))}
+                    className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+                      !isStudent
+                        ? 'border-employer-500 bg-employer-50 shadow-glow-employer'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    {!isStudent && (
+                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-employer-500 flex items-center justify-center">
+                        <Check size={12} className="text-white" strokeWidth={3} />
+                      </div>
+                    )}
+                    <Building2 size={24} className={!isStudent ? 'text-employer-600' : 'text-slate-400'} />
+                    <p className={`font-semibold text-sm mt-2 ${!isStudent ? 'text-employer-700' : 'text-slate-700'}`}>Employer</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">Post projects &amp; hire talent</p>
+                  </button>
                 </div>
                 {errors.role && <p className="field-error">{errors.role}</p>}
               </div>
 
-              <Button type="submit" loading={loading} className="w-full mt-1 py-3 text-base">
+              <Input label="Full name" name="name" autoComplete="name" leftIcon={User}
+                placeholder="Muhammad Ali" value={form.name} onChange={set('name')} error={errors.name} />
+              <Input label="Email address" type="email" name="email" autoComplete="email" leftIcon={Mail}
+                placeholder="you@example.com" value={form.email} onChange={set('email')} error={errors.email} />
+              <div>
+                <Input label="Password" type="password" name="password" autoComplete="new-password" leftIcon={Lock}
+                  placeholder="Min. 8 characters" value={form.password} onChange={set('password')} error={errors.password} />
+                <PasswordStrength password={form.password} />
+              </div>
+              <Input label="Confirm password" type="password" name="confirmPassword" autoComplete="new-password" leftIcon={Lock}
+                placeholder="Repeat your password" value={form.confirmPassword} onChange={set('confirmPassword')} error={errors.confirmPassword} />
+
+              <Button
+                type="submit"
+                loading={loading}
+                variant={isStudent ? 'student' : 'employer'}
+                className="w-full mt-1 py-3 text-base"
+              >
                 Create account <ArrowRight size={16} />
               </Button>
             </form>

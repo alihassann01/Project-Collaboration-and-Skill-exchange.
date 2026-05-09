@@ -31,11 +31,30 @@ class ProjectController
             $params[] = "%{$search}%";
         }
 
+        // Bug 9: Hide projects where student already has an approved application
+        if (Auth::check() && Auth::user()->role === 'student') {
+            $studentId = Auth::id();
+            $where[] = "p.id NOT IN (
+                SELECT a.project_id FROM applications a
+                WHERE a.student_id = ? AND a.status = 'approved'
+            )";
+            $params[] = $studentId;
+        }
+
         $whereStr = implode(' AND ', $where);
         $total    = (int)DB::scalar(
             "SELECT COUNT(*) FROM projects p WHERE {$whereStr}",
             $params
         );
+
+        // Sort handling
+        $sort = trim($_GET['sort'] ?? '');
+        $orderBy = match ($sort) {
+            'oldest'      => 'p.created_at ASC',
+            'budget_high' => 'p.budget_max DESC, p.created_at DESC',
+            'deadline'    => 'p.deadline ASC',
+            default       => 'p.created_at DESC',
+        };
 
         $offset = ($page - 1) * $perPage;
         $rows   = DB::query(
@@ -45,7 +64,7 @@ class ProjectController
              FROM projects p
              JOIN users u ON u.id = p.employer_id
              WHERE {$whereStr}
-             ORDER BY p.created_at DESC
+             ORDER BY {$orderBy}
              LIMIT {$perPage} OFFSET {$offset}",
             $params
         );
@@ -85,6 +104,19 @@ class ProjectController
         DB::execute('UPDATE projects SET views = views + 1 WHERE id = ?', [$id]);
         $project->views = ($project->views ?? 0) + 1;
         $project->skills_required = json_decode($project->skills_required ?? '[]', true) ?? [];
+
+        $project->already_applied = false;
+$project->my_application_status = null;
+if (Auth::check() && Auth::user()->role === 'student') {
+    $app = DB::queryOne(
+        'SELECT id, status FROM applications WHERE project_id = ? AND student_id = ?',
+        [$id, Auth::id()]
+    );
+    if ($app) {
+        $project->already_applied = true;
+        $project->my_application_status = $app->status;
+    }
+}
 
         Response::success($project);
     }

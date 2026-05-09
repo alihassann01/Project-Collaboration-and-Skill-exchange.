@@ -19,13 +19,13 @@ const defaultIcon = <Bell size={18} className="text-slate-400" />
 
 function SkeletonRow() {
   return (
-    <div className="flex items-start gap-3 px-5 py-4 animate-pulse">
-      <div className="w-9 h-9 rounded-full bg-slate-200 flex-shrink-0 mt-0.5" />
+    <div className="flex items-start gap-3 px-5 py-4">
+      <div className="w-9 h-9 rounded-xl skeleton flex-shrink-0 mt-0.5" />
       <div className="flex-1 space-y-2">
-        <div className="h-3.5 bg-slate-200 rounded w-40" />
-        <div className="h-3 bg-slate-100 rounded w-64" />
+        <div className="h-3.5 skeleton rounded w-40" />
+        <div className="h-3 skeleton rounded w-64" />
       </div>
-      <div className="h-3 bg-slate-100 rounded w-12 flex-shrink-0" />
+      <div className="h-3 skeleton rounded w-12 flex-shrink-0" />
     </div>
   )
 }
@@ -52,7 +52,9 @@ export default function Notifications() {
       try {
         await markOneRead(item.id)
         setItems(prev => prev.map(n => n.id === item.id ? { ...n, is_read: 1 } : n))
-        setUnread(prev => Math.max(0, prev - 1))
+        const newCount = Math.max(0, unread - 1)
+        setUnread(newCount)
+        window.dispatchEvent(new CustomEvent('navbar:unread', { detail: { count: newCount } }))
       } catch (err) {
         toast.error(err.response?.data?.message || 'Could not mark as read.')
       }
@@ -65,6 +67,7 @@ export default function Notifications() {
       await markAllRead()
       setItems(prev => prev.map(n => ({ ...n, is_read: 1 })))
       setUnread(0)
+      window.dispatchEvent(new CustomEvent('navbar:unread', { detail: { count: 0 } }))
       toast.success('All notifications marked as read.')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to mark all as read.')
@@ -112,7 +115,7 @@ export default function Notifications() {
                 i < items.length - 1 ? 'border-b border-slate-100' : ''
               } ${!item.is_read ? 'bg-blue-50 border-l-4 border-l-brand-400' : ''}`}
             >
-              <div className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 ${
+              <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center mt-0.5 ${
                 !item.is_read ? 'bg-brand-100' : 'bg-slate-100'
               }`}>
                 {typeIcons[item.type] || defaultIcon}

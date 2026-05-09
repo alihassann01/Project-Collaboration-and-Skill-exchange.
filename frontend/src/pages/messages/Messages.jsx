@@ -8,11 +8,11 @@ import { MessageSquare } from 'lucide-react'
 
 function SkeletonRow() {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 animate-pulse">
-      <div className="w-10 h-10 rounded-full bg-slate-200 flex-shrink-0" />
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="w-10 h-10 rounded-xl skeleton flex-shrink-0" />
       <div className="flex-1 space-y-2">
-        <div className="h-3.5 bg-slate-200 rounded w-32" />
-        <div className="h-3 bg-slate-100 rounded w-48" />
+        <div className="h-3.5 skeleton rounded w-32" />
+        <div className="h-3 skeleton rounded w-48" />
       </div>
     </div>
   )
@@ -24,12 +24,24 @@ export default function Messages() {
   const navigate = useNavigate()
   const { id: activeId } = useParams()
 
+  // Bug 4: Polling every 5 seconds to keep left panel in sync
   useEffect(() => {
-    getConversations()
-      .then(r => setConversations(r.data.data.conversations))
-      .catch(err => toast.error(err.response?.data?.message || 'Failed to load conversations.'))
-      .finally(() => setLoading(false))
-  }, [activeId]) // refetch when conversation changes (to update unread counts)
+    let cancelled = false
+
+    const refresh = () => {
+      getConversations()
+        .then(r => {
+          if (!cancelled) setConversations(r.data.data?.conversations ?? [])
+        })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setLoading(false) })
+    }
+
+    refresh()
+    const interval = setInterval(refresh, 5000)
+
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [activeId])
 
   return (
     <div className="flex h-[calc(100vh-7rem)] border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
@@ -61,7 +73,7 @@ export default function Messages() {
                     isActive ? 'bg-brand-50 border-r-2 border-brand-500' : ''
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-semibold ${colorFor(conv.other_user_id)}`}>
+                  <div className={`w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-white text-sm font-semibold shadow-sm ${colorFor(conv.other_user_id)}`}>
                     {getInitials(conv.other_user_name)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -75,8 +87,12 @@ export default function Messages() {
                       <p className="text-xs text-slate-500 truncate flex-1">
                         {conv.last_message || 'No messages yet'}
                       </p>
+                      {/* Bug 4: Show unread count as number badge instead of plain dot */}
                       {hasUnread && (
-                        <span className="w-2 h-2 rounded-full bg-brand-500 flex-shrink-0" />
+                        <span className="w-5 h-5 rounded-full bg-brand-500 text-white text-[10px] font-bold
+                          flex items-center justify-center flex-shrink-0">
+                          {Number(conv.unread_count) > 99 ? '99+' : conv.unread_count}
+                        </span>
                       )}
                     </div>
                   </div>

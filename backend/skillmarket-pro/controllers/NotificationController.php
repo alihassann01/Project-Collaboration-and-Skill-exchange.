@@ -24,6 +24,19 @@ class NotificationController
         Response::success(['notifications' => $items, 'unread_count' => $unread]);
     }
 
+    // GET /api/notifications/unread-count
+    public function unreadCount(): void
+    {
+        if (!Auth::check()) { Response::error('Unauthenticated.', 401); return; }
+
+        $count = (int) DB::scalar(
+            'SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0',
+            [Auth::id()]
+        );
+
+        Response::success(['unread_count' => $count]);
+    }
+
     // POST /api/notifications/{id}/read
     public function markRead(int $id): void
     {

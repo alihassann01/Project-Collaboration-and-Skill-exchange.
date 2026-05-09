@@ -481,10 +481,14 @@ function validate(array $rules): array
 // ─── Notifications ────────────────────────────────────────────────────────────
 function createNotification(int $userId, string $type, string $title, string $body, ?string $link = null): void
 {
-    DB::execute(
-        'INSERT INTO notifications (user_id, type, title, body, link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
-        [$userId, $type, $title, $body, $link]
-    );
+    try {
+        DB::execute(
+            'INSERT INTO notifications (user_id, type, title, body, link, is_read, created_at) VALUES (?, ?, ?, ?, ?, 0, NOW())',
+            [$userId, $type, $title, $body, $link]
+        );
+    } catch (\Exception $e) {
+        error_log('Notification insert failed: ' . $e->getMessage());
+    }
 }
 
 // ─── Conversation Helper ──────────────────────────────────────────────────────

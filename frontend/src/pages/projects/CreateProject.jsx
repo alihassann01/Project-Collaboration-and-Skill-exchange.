@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { X, Plus } from 'lucide-react'
+import { X, Plus, Briefcase } from 'lucide-react'
+import { chipColorClass } from '../../utils/format'
 import { createProject } from '../../api/projects'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
@@ -26,10 +27,9 @@ function SkillTagInput({ skills, onAdd, onRemove }) {
       <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200
         hover:border-slate-300 focus-within:ring-2 focus-within:ring-brand-400
         focus-within:border-brand-400 focus-within:bg-white transition-all min-h-[44px]">
-        {skills.map(s => (
+        {skills.map((s, i) => (
           <span key={s}
-            className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full
-              bg-brand-50 text-brand-700 font-medium border border-brand-100">
+            className={`flex items-center gap-1 ${chipColorClass(i)}`}>
             {s}
             <button type="button" onClick={() => onRemove(s)}
               className="hover:text-red-500 transition-colors">
@@ -58,7 +58,7 @@ function validate(form, skills) {
   if (!form.description.trim())               errs.description = 'Description is required.'
   else if (form.description.trim().length < 50) errs.description = 'Description must be at least 50 characters.'
   if (!form.deadline)                         errs.deadline    = 'Deadline is required.'
-  else if (new Date(form.deadline) <= new Date()) errs.deadline = 'Deadline must be a future date.'
+  else if (new Date(form.deadline) < new Date(new Date().toDateString())) errs.deadline = 'Deadline must be a future date.'
   return errs
 }
 
@@ -123,7 +123,10 @@ export default function CreateProject() {
   return (
     <div className="animate-fade-up max-w-2xl">
       <div className="mb-6">
-        <h1 className="font-display text-2xl font-700 text-slate-900">Post a New Project</h1>
+        <div className="inline-flex items-center gap-2 text-xs font-semibold text-employer-600 bg-employer-50 px-3 py-1.5 rounded-full border border-employer-100 mb-3">
+          <Briefcase size={12} /> Employer
+        </div>
+        <h1 className="font-display text-2xl font-bold text-slate-900">Post a New Project</h1>
         <p className="text-slate-500 text-sm mt-1">Fill in the details to find the right students.</p>
       </div>
 
@@ -212,7 +215,7 @@ export default function CreateProject() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit" variant="primary" loading={loading}>
+            <Button type="submit" variant="employer" loading={loading}>
               <Plus size={15} /> Create Project
             </Button>
             <Button type="button" variant="secondary" onClick={() => navigate(-1)}>

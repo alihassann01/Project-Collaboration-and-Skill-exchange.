@@ -55,7 +55,7 @@ class ProfileController
             'headline'             => trim($input['headline'] ?? '') ?: null,
             'bio'                  => trim($input['bio'] ?? '') ?: null,
             'location'             => trim($input['location'] ?? '') ?: null,
-            'website'              => trim($input['website'] ?? '') ?: null,
+            'website'              => $this->normalizeUrl(trim($input['website'] ?? '') ?: null),
             'availability'         => $input['availability'] ?? null,
             'skills_can_teach'     => trim($input['skills_can_teach'] ?? '') ?: null,
             'skills_want_to_learn' => trim($input['skills_want_to_learn'] ?? '') ?: null,
@@ -65,6 +65,17 @@ class ProfileController
         $newPass = $input['new_password'] ?? '';
         $newPassConfirm = $input['new_password_confirmation'] ?? '';
         if (!empty($newPass)) {
+            // Require current password verification
+            $currentPass = $input['current_password'] ?? '';
+            if (empty($currentPass)) {
+                Response::error('Current password is required.', 422);
+                return;
+            }
+            $currentUser = DB::queryOne('SELECT password FROM users WHERE id = ?', [Auth::id()]);
+            if (!$currentUser || !password_verify($currentPass, $currentUser->password)) {
+                Response::error('Current password is incorrect.', 422);
+                return;
+            }
             if ($newPass !== $newPassConfirm) {
                 Response::error('Passwords do not match.', 422);
                 return;
@@ -89,5 +100,12 @@ class ProfileController
         );
 
         Response::success(['user' => $updatedUser], 'Profile updated.');
+    }
+
+    private function normalizeUrl(?string $url): ?string
+    {
+        if (!$url) return null;
+        if (preg_match('/^https?:\/\//', $url)) return $url;
+        return 'https://' . $url;
     }
 }

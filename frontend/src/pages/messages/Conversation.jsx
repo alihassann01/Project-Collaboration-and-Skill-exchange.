@@ -34,6 +34,8 @@ export default function Conversation() {
   const [sending, setSending] = useState(false)
   const bottomRef = useRef(null)
   const textareaRef = useRef(null)
+  const scrollContainerRef = useRef(null)
+  const wasAtBottomRef = useRef(true)
 
   // Load current conversation (marks messages as read on the backend)
   useEffect(() => {
@@ -53,9 +55,36 @@ export default function Conversation() {
       .finally(() => setLoading(false))
   }, [convId])
 
-  // Auto-scroll
+  // Poll for new messages every 5 seconds
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (loading || error) return
+    const interval = setInterval(() => {
+      // Check if user is at bottom before poll
+      const el = scrollContainerRef.current
+      if (el) {
+        wasAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+      }
+      getConversation(convId)
+        .then(r => {
+          const newMessages = r.data.data.messages
+          setMessages(prev => {
+            if (newMessages.length !== prev.length) return newMessages
+            const lastNew = newMessages[newMessages.length - 1]
+            const lastOld = prev[prev.length - 1]
+            if (lastNew?.id !== lastOld?.id) return newMessages
+            return prev
+          })
+        })
+        .catch(() => {}) // silent fail on poll
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [convId, loading, error])
+
+  // Auto-scroll only if user was at the bottom
+  useEffect(() => {
+    if (wasAtBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages])
 
   const handleSend = async () => {
@@ -125,7 +154,7 @@ export default function Conversation() {
 
         {other && (
           <>
-            <div className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-semibold ${colorFor(other.id)}`}>
+            <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-white text-sm font-semibold shadow-sm ${colorFor(other.id)}`}>
               {getInitials(other.name)}
             </div>
             <div className="flex-1 min-w-0">
@@ -149,7 +178,7 @@ export default function Conversation() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-1">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-1">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
             <MessageSquare size={40} className="text-slate-300" />
@@ -164,7 +193,8 @@ export default function Conversation() {
                 <div className="flex-1 h-px bg-slate-100" />
               </div>
               {group.messages.map((msg, mi) => {
-                const isMe = String(msg.sender_id) === String(me?.id)
+                const myId = Number(me?.id ?? me?.user_id ?? 0)
+                const isMe = myId > 0 && Number(msg.sender_id) === myId
                 return (
                   <div key={msg.id || mi} className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-1`}>
                     <div className={`max-w-xs md:max-w-md lg:max-w-lg ${isMe ? 'items-end' : 'items-start'} flex flex-col gap-0.5`}>
@@ -192,10 +222,11 @@ export default function Conversation() {
           <textarea
             ref={textareaRef}
             value={body}
-            onChange={e => setBody(e.target.value)}
+            onChange={e => setBody(e.target.value.slice(0, 2000))}
             onKeyDown={handleKeyDown}
             placeholder="Type a message… (Enter to send)"
             rows={1}
+            maxLength={2000}
             className="flex-1 resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all max-h-24 overflow-y-auto bg-slate-50 focus:bg-white"
             style={{ minHeight: '42px' }}
           />
@@ -210,6 +241,11 @@ export default function Conversation() {
             }
           </button>
         </div>
+        {body.length > 0 && (
+          <p className={`text-xs mt-1 text-right ${body.length >= 1900 ? 'text-amber-500 font-medium' : 'text-slate-400'}`}>
+            {body.length} / 2000
+          </p>
+        )}
       </div>
     </>
   )

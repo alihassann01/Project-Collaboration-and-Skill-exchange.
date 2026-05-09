@@ -11,13 +11,13 @@ const FILTERS = ['All', 'Pending', 'Approved', 'Rejected', 'Withdrawn']
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-5 flex flex-col gap-3 animate-pulse">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col gap-3">
       <div className="flex justify-between">
-        <div className="h-5 bg-slate-200 rounded w-1/2" />
-        <div className="h-5 bg-slate-200 rounded-full w-20" />
+        <div className="h-5 skeleton rounded w-1/2" />
+        <div className="h-5 skeleton rounded-full w-20" />
       </div>
-      <div className="h-3 bg-slate-200 rounded w-1/4" />
-      <div className="h-3 bg-slate-200 rounded w-1/3" />
+      <div className="h-3 skeleton rounded w-1/4" />
+      <div className="h-3 skeleton rounded w-1/3" />
     </div>
   )
 }
@@ -55,7 +55,13 @@ function ApplicationCard({ app, onWithdrawn }) {
           >
             {app.project_title}
           </Link>
-          <p className="text-xs text-slate-400 mt-0.5">{app.employer_name}</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {app.employer_id ? (
+              <Link to={`/profile/${app.employer_id}`} className="hover:text-brand-600 transition-colors">
+                {app.employer_name}
+              </Link>
+            ) : app.employer_name}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={app.status} />
@@ -87,6 +93,14 @@ function ApplicationCard({ app, onWithdrawn }) {
               {app.cover_letter}
             </p>
           )}
+        </div>
+      )}
+
+      {/* Employer note */}
+      {app.employer_note && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <p className="text-xs font-semibold text-amber-700 mb-1">📝 Employer Feedback</p>
+          <p className="text-sm text-amber-800 leading-relaxed">{app.employer_note}</p>
         </div>
       )}
 
@@ -129,30 +143,40 @@ export default function MyApplications() {
   return (
     <div className="animate-fade-up space-y-6">
       {/* Heading */}
-      <div className="flex items-center gap-3">
-        <h1 className="font-display text-2xl font-700 text-slate-900">My Applications</h1>
-        {!loading && (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">
-            {applications.length}
-          </span>
-        )}
+      <div>
+        <h1 className="font-display text-2xl font-bold text-slate-900">My Applications</h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          Track your project applications{!loading && <> · <span className="font-semibold text-slate-700">{applications.length}</span> total</>}
+        </p>
       </div>
 
       {/* Filter tabs */}
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit flex-wrap">
-        {FILTERS.map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              filter === f
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            {f}
-          </button>
-        ))}
+        {FILTERS.map(f => {
+          const count = f === 'All'
+            ? applications.length
+            : applications.filter(a => a.status === f.toLowerCase()).length
+          return (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                filter === f
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {f}
+              {count > 0 && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold leading-none ${
+                  filter === f ? 'bg-brand-100 text-brand-700' : 'bg-slate-200 text-slate-500'
+                }`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* Content */}
@@ -161,17 +185,23 @@ export default function MyApplications() {
           {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : applications.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-20 text-center">
-          <p className="text-slate-400 font-medium mb-4">You haven't applied to any projects yet.</p>
+        <div className="empty-state bg-white rounded-2xl border border-slate-100 shadow-sm">
+          <div className="text-5xl mb-4">📋</div>
+          <p className="empty-state-title">No applications yet</p>
+          <p className="empty-state-text mb-4">Start browsing projects to find your next opportunity</p>
           <Link to="/projects">
-            <Button variant="primary" size="sm">
+            <Button variant="student" size="sm">
               Browse Projects <ArrowRight size={14} />
             </Button>
           </Link>
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 py-12 text-center">
-          <p className="text-slate-400">No {filter.toLowerCase()} applications.</p>
+          <div className="text-4xl mb-3">
+            {filter === 'Pending' ? '⏳' : filter === 'Approved' ? '✅' : filter === 'Rejected' ? '❌' : filter === 'Withdrawn' ? '🙅' : '💼'}
+          </div>
+          <p className="text-slate-500 font-medium">No {filter.toLowerCase()} applications</p>
+          <p className="text-xs text-slate-400 mt-1">Try checking another filter or browse new projects</p>
         </div>
       ) : (
         <div className="flex flex-col gap-4">

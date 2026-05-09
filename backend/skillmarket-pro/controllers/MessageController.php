@@ -4,19 +4,20 @@ class MessageController
 {
     private function getConversationsList(): array
     {
+        $uid = (int) Auth::id();
+
         return DB::query(
-            'SELECT c.id, c.last_message_at,
-                    CASE WHEN c.user_one_id = :uid THEN c.user_two_id ELSE c.user_one_id END AS other_user_id,
-                    CASE WHEN c.user_one_id = :uid THEN u2.name ELSE u1.name END AS other_user_name,
-                    CASE WHEN c.user_one_id = :uid THEN u2.avatar ELSE u1.avatar END AS other_user_avatar,
+            "SELECT c.id, c.last_message_at,
+                    CASE WHEN c.user_one_id = {$uid} THEN c.user_two_id ELSE c.user_one_id END AS other_user_id,
+                    CASE WHEN c.user_one_id = {$uid} THEN u2.name ELSE u1.name END AS other_user_name,
+                    CASE WHEN c.user_one_id = {$uid} THEN u2.avatar ELSE u1.avatar END AS other_user_avatar,
                     (SELECT m.body FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_message,
-                    (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.sender_id != :uid AND m.is_read = 0) AS unread_count
+                    (SELECT COUNT(*) FROM messages m2 WHERE m2.conversation_id = c.id AND m2.sender_id != {$uid} AND m2.is_read = 0) AS unread_count
              FROM conversations c
              JOIN users u1 ON c.user_one_id = u1.id
              JOIN users u2 ON c.user_two_id = u2.id
-             WHERE c.user_one_id = :uid OR c.user_two_id = :uid
-             ORDER BY COALESCE(c.last_message_at, c.created_at) DESC',
-            [':uid' => Auth::id()]
+             WHERE c.user_one_id = {$uid} OR c.user_two_id = {$uid}
+             ORDER BY COALESCE(c.last_message_at, c.created_at) DESC"
         );
     }
 
@@ -104,17 +105,21 @@ class MessageController
             ? $conversation->user_two_id
             : $conversation->user_one_id;
 
-        $sender = Auth::user();
-        DB::execute(
-            'INSERT INTO notifications (user_id, type, title, body, link, is_read, created_at)
-             VALUES (?, "message", ?, ?, ?, 0, NOW())',
-            [
-                $otherId,
-                'New message from ' . $sender->name,
-                $sender->name . ': ' . mb_substr($body, 0, 80),
-                '/messages/' . $convId,
-            ]
-        );
+       $sender = Auth::user();
+        try {
+            DB::execute(
+                'INSERT INTO notifications (user_id, type, title, body, link, is_read, created_at)
+                 VALUES (?, "message", ?, ?, ?, 0, NOW())',
+                [
+                    $otherId,
+                    'New message from ' . $sender->name,
+                    $sender->name . ': ' . mb_substr($body, 0, 80),
+                    '/messages/' . $convId,
+                ]
+            );
+        } catch (\Exception $e) {
+            error_log('Notification insert failed: ' . $e->getMessage());
+        }
 
         $newMsg = DB::queryOne('SELECT * FROM messages WHERE id = ?', [$newId]);
         Response::success(['message' => $newMsg], 'Message sent.', 201);
@@ -169,5 +174,22 @@ class MessageController
         $convId = (int)DB::scalar('SELECT LAST_INSERT_ID()');
 
         Response::success(['conversation_id' => $convId], 'Conversation created.', 201);
+    }
+
+    // GET /api/messages/unread-count
+    public function unreadCount(): void
+    {
+        if (!Auth::check()) { Response::error('Unauthenticated.', 401); return; }
+
+        $count = (int) DB::scalar(
+            'SELECT COUNT(*) FROM messages m
+             JOIN conversations c ON m.conversation_id = c.id
+             WHERE (c.user_one_id = ? OR c.user_two_id = ?)
+               AND m.sender_id != ?
+               AND m.is_read = 0',
+            [Auth::id(), Auth::id(), Auth::id()]
+        );
+
+        Response::success(['unread_count' => $count]);
     }
 }

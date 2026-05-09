@@ -1,17 +1,13 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, CalendarDays, Building2, DollarSign } from 'lucide-react'
+import { ArrowRight, CalendarDays, Users, Clock, Briefcase } from 'lucide-react'
+import { getInitials, chipColorClass, formatBudgetRange, deadlineUrgency, typeLabels, durationLabels } from '../utils/format'
 import StatusBadge from './ui/StatusBadge'
-
-const typeLabel = { remote: '🏠 Remote', onsite: '🏢 Onsite', hybrid: '🔀 Hybrid' }
-
-function formatPKR(n) {
-  return Number(n).toLocaleString('en-PK')
-}
 
 export default function ProjectCard({ project }) {
   const {
     id, title, employer_name, skills_required,
-    deadline, status, type, budget_min, budget_max, views,
+    deadline, status, type, budget_min, budget_max,
+    views, application_count, duration,
   } = project
 
   const skills = Array.isArray(skills_required)
@@ -20,101 +16,108 @@ export default function ProjectCard({ project }) {
       ? skills_required.split(',').map(s => s.trim()).filter(Boolean)
       : []
 
+  const budgetStr = formatBudgetRange(budget_min, budget_max)
+  const urgency = deadlineUrgency(deadline)
+  const typeInfo = typeLabels[type]
+  const durationStr = durationLabels[duration]
+
+  const visibleSkills = skills.slice(0, 3)
+  const extraSkills = skills.length - 3
+
   const deadlineStr = deadline
-    ? `Due: ${new Date(deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    ? new Date(deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null
-
-  const hasBudget = budget_min != null || budget_max != null
-  const budgetStr = hasBudget
-    ? budget_min != null && budget_max != null
-      ? `PKR ${formatPKR(budget_min)} – ${formatPKR(budget_max)}`
-      : budget_min != null
-        ? `PKR ${formatPKR(budget_min)}+`
-        : `Up to PKR ${formatPKR(budget_max)}`
-    : null
-
-  const visibleSkills = skills.slice(0, 4)
-  const extraSkills = skills.length - 4
 
   return (
-    <div className="group bg-white rounded-2xl shadow-card border border-slate-100/80 p-5 flex flex-col gap-3
-      hover:shadow-card-hover hover:border-brand-100 transition-all duration-200">
+    <Link
+      to={`/projects/${id}`}
+      className="group block bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden card-hover"
+    >
+      <div className="p-5 flex flex-col gap-3">
+        {/* Header: avatar + employer + type */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {employer_name && (
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
+                {getInitials(employer_name)}
+              </div>
+            )}
+            <div className="min-w-0">
+              {employer_name && (
+                <p className="text-xs text-slate-400 font-medium truncate">{employer_name}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {typeInfo && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                {typeInfo.icon} {typeInfo.label}
+              </span>
+            )}
+            <StatusBadge status={status} size="xs" />
+          </div>
+        </div>
 
-      {/* Title + status */}
-      <div className="flex items-start justify-between gap-2">
-        <Link
-          to={`/projects/${id}`}
-          className="font-display font-700 text-slate-900 text-base leading-snug
-            group-hover:text-brand-600 transition-colors line-clamp-2"
-        >
+        {/* Title */}
+        <h3 className="font-display font-bold text-slate-900 text-[15px] leading-snug group-hover:text-brand-600 transition-colors line-clamp-2">
           {title}
-        </Link>
-        <StatusBadge status={status} />
-      </div>
+        </h3>
 
-      {/* Employer */}
-      {employer_name && (
-        <div className="flex items-center gap-1.5 -mt-1">
-          <Building2 size={11} className="text-slate-300" />
-          <span className="text-xs text-slate-400 font-medium">Posted by {employer_name}</span>
-        </div>
-      )}
+        {/* Skills */}
+        {skills.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {visibleSkills.map((skill, i) => (
+              <span key={skill} className={chipColorClass(i)}>
+                {skill}
+              </span>
+            ))}
+            {extraSkills > 0 && (
+              <span className="tag-chip bg-slate-50 text-slate-500 border-slate-200">
+                +{extraSkills}
+              </span>
+            )}
+          </div>
+        )}
 
-      {/* Skills */}
-      {skills.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {visibleSkills.map(skill => (
-            <span
-              key={skill}
-              className="text-xs px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 font-medium border border-brand-100"
-            >
-              {skill}
-            </span>
-          ))}
-          {extraSkills > 0 && (
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">
-              +{extraSkills} more
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Info row: type, budget, views */}
-      {(type || hasBudget || views != null) && (
+        {/* Info row: budget, duration */}
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          {type && (
-            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">
-              {typeLabel[type] ?? type}
-            </span>
-          )}
           {budgetStr && (
-            <span className="flex items-center gap-1 font-semibold text-green-700 bg-green-50 px-2.5 py-0.5 rounded-full border border-green-100">
-              <DollarSign size={10} /> {budgetStr}
+            <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+              <Briefcase size={10} /> {budgetStr}
             </span>
           )}
-          {views != null && (
-            <span className="text-slate-400">👁 {views} views</span>
+          {durationStr && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">
+              <Clock size={10} /> {durationStr}
+            </span>
           )}
         </div>
-      )}
+      </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-50">
-        {deadlineStr ? (
-          <span className="flex items-center gap-1 text-xs text-slate-400">
-            <CalendarDays size={12} />
-            {deadlineStr}
-          </span>
-        ) : <span />}
+      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+        <div className="flex items-center gap-3 text-xs text-slate-400">
+          {urgency && (
+            <span className={`inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-full ${urgency.color}`}>
+              {urgency.icon} {urgency.label}
+            </span>
+          )}
+          {!urgency && deadlineStr && (
+            <span className="flex items-center gap-1">
+              <CalendarDays size={11} /> {deadlineStr}
+            </span>
+          )}
+          {application_count != null && (
+            <span className="flex items-center gap-1">
+              <Users size={11} /> {application_count} applied
+            </span>
+          )}
+        </div>
 
-        <Link
-          to={`/projects/${id}`}
-          className="flex items-center gap-1 text-xs font-semibold text-brand-600
-            hover:text-brand-700 transition-colors"
-        >
-          View Details <ArrowRight size={13} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-        </Link>
+        <span className="flex items-center gap-1 text-xs font-semibold text-brand-600 group-hover:text-brand-700 transition-colors">
+          View <ArrowRight size={13} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+        </span>
       </div>
-    </div>
+    </Link>
   )
 }

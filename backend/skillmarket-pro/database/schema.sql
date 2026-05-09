@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS reports (
 
 -- ─── Demo Seed Data ────────────────────────────────────────────────────────────
 INSERT INTO users (name, email, password, role, bio, headline, location, website, is_active, availability) VALUES
-('Admin', 'admin@skillmarket.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', NULL, 'Platform Administrator', NULL, NULL, 1, 'available'),
+('Admin', 'admin@admin.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', NULL, 'Platform Administrator', NULL, NULL, 1, 'available'),
 ('TechCorp Pvt Ltd', 'employer@techcorp.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'employer', 'We build scalable software solutions for Pakistan and the Gulf region. Founded 2018, 50+ projects delivered.', 'Software Agency · Lahore', 'Lahore, Pakistan', 'https://techcorp.pk', 1, 'available'),
 ('Ali Hassan', 'ali@student.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'Final year CS student at UET Faisalabad. I love building fast, clean web applications with React and PHP.', 'Full-Stack Developer · Open to Work', 'Faisalabad, Pakistan', NULL, 1, 'available'),
 ('Sara Khan', 'sara@student.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'Python and ML enthusiast. Working on NLP research at FAST-NUCES.', 'ML Engineer · Python Expert', 'Karachi, Pakistan', NULL, 1, 'available');

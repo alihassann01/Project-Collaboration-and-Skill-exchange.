@@ -30,8 +30,13 @@ class SkillSwapController
              FROM skill_swaps ss
              JOIN users u ON ss.user_id = u.id
              WHERE ss.status = "active" AND ss.user_id != ?
+               AND ss.id NOT IN (
+                   SELECT sr.swap_id FROM swap_requests sr
+                   WHERE (sr.from_user_id = ? OR sr.to_user_id = ?)
+                   AND sr.status = "accepted"
+               )
              ORDER BY ss.created_at DESC',
-            [$userId]
+            [$userId, $userId, $userId]
         );
         foreach ($otherListings as $row) {
             $row->is_active = true;
@@ -39,9 +44,9 @@ class SkillSwapController
 
         // Incoming requests — people requesting MY listings
         $incomingRequests = DB::query(
-            'SELECT sr.id, sr.swap_id, sr.status, sr.created_at,
-                    ss.teach_skill, ss.learn_skill,
-                    u.name AS requester_name
+            'SELECT sr.id, sr.swap_id, sr.from_user_id AS requester_id, sr.status, sr.created_at,
+        ss.teach_skill, ss.learn_skill,
+        u.name AS requester_name
              FROM swap_requests sr
              JOIN skill_swaps ss ON sr.swap_id = ss.id
              JOIN users u ON sr.from_user_id = u.id
@@ -53,7 +58,7 @@ class SkillSwapController
         // Outgoing requests — requests I sent to others
         $outgoingRequests = DB::query(
             'SELECT sr.id, sr.swap_id, sr.status, sr.created_at,
-                    ss.teach_skill, ss.learn_skill,
+                    ss.teach_skill, ss.learn_skill, ss.user_id AS owner_user_id,
                     u.name AS owner_name
              FROM swap_requests sr
              JOIN skill_swaps ss ON sr.swap_id = ss.id
@@ -137,6 +142,16 @@ class SkillSwapController
             [Auth::id(), $swap->user_id, $swapId]
         );
 
+        // Notify the swap listing owner about the new request
+        $requesterName = Auth::user()->name;
+        createNotification(
+            (int)$swap->user_id,
+            'swap_request',
+            'New Skill Swap Request',
+            "{$requesterName} wants to swap: they teach {$swap->teach_skill}, you teach {$swap->learn_skill}",
+            '/skill-swap'
+        );
+
         Response::success([], 'Request sent.');
     }
 
@@ -166,6 +181,26 @@ class SkillSwapController
             'UPDATE swap_requests SET status = ?, updated_at = NOW() WHERE id = ?',
             [$status, $reqId]
         );
+
+        // Notify the requester about the response
+        $responderName = Auth::user()->name;
+        if ($status === 'accepted') {
+            createNotification(
+                (int)$req->from_user_id,
+                'swap_request',
+                'Swap Request Accepted!',
+                "{$responderName} accepted your skill swap request. Connect and start learning!",
+                '/skill-swap'
+            );
+        } elseif ($status === 'rejected') {
+            createNotification(
+                (int)$req->from_user_id,
+                'swap_request',
+                'Swap Request Update',
+                "{$responderName} was not available for the skill swap this time.",
+                '/skill-swap'
+            );
+        }
 
         Response::success([], 'Response recorded.');
     }

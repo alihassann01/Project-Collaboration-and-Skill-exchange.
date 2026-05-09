@@ -6,15 +6,18 @@ import {
   Menu, X, ChevronRight, MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getNotifications } from '../api/notifications'
+import { getUnreadCount } from '../api/notifications'
+import { getUnreadMessageCount } from '../api/messages'
+import { getInitials } from '../utils/format'
 import Button from './ui/Button'
 
-const POLL_INTERVAL = 30000
+const POLL_INTERVAL = 8000
 
 // Role-based design tokens
 const roleConfig = {
   student: {
-    border: 'border-b-2 border-student-500',
+    border: 'border-student-500',
+    gradientBorder: 'from-student-400 via-student-500 to-student-600',
     logoBg: 'bg-student-600',
     logoHover: 'group-hover:bg-student-700',
     navActive: 'bg-student-50 text-student-700 font-semibold',
@@ -23,9 +26,12 @@ const roleConfig = {
     badgeLabel: '🎓 Student',
     bellActive: 'text-student-600',
     drawerActive: 'bg-student-50 text-student-700',
+    avatarBg: 'bg-student-500',
+    pillBg: 'bg-student-50 text-student-700 border-student-200',
   },
   employer: {
-    border: 'border-b-2 border-employer-500',
+    border: 'border-employer-500',
+    gradientBorder: 'from-employer-400 via-employer-500 to-employer-600',
     logoBg: 'bg-employer-600',
     logoHover: 'group-hover:bg-employer-700',
     navActive: 'bg-employer-50 text-employer-700 font-semibold',
@@ -34,9 +40,12 @@ const roleConfig = {
     badgeLabel: '🏢 Employer',
     bellActive: 'text-employer-600',
     drawerActive: 'bg-employer-50 text-employer-700',
+    avatarBg: 'bg-employer-500',
+    pillBg: 'bg-employer-50 text-employer-700 border-employer-200',
   },
   admin: {
-    border: 'border-b-2 border-amber-400',
+    border: 'border-amber-400',
+    gradientBorder: 'from-amber-400 via-amber-500 to-amber-600',
     logoBg: 'bg-amber-500',
     logoHover: 'group-hover:bg-amber-600',
     navActive: 'bg-amber-50 text-amber-700 font-semibold',
@@ -45,11 +54,14 @@ const roleConfig = {
     badgeLabel: '⚡ Admin',
     bellActive: 'text-amber-600',
     drawerActive: 'bg-amber-50 text-amber-700',
+    avatarBg: 'bg-amber-500',
+    pillBg: 'bg-amber-50 text-amber-700 border-amber-200',
   },
 }
 
 const defaultRole = {
-  border: 'border-b border-slate-100',
+  border: 'border-slate-200',
+  gradientBorder: 'from-brand-400 via-brand-500 to-brand-600',
   logoBg: 'bg-brand-600',
   logoHover: 'group-hover:bg-brand-700',
   navActive: 'bg-brand-50 text-brand-700 font-semibold',
@@ -58,11 +70,14 @@ const defaultRole = {
   badgeLabel: 'Guest',
   bellActive: 'text-brand-600',
   drawerActive: 'bg-brand-50 text-brand-700',
+  avatarBg: 'bg-brand-500',
+  pillBg: 'bg-slate-100 text-slate-600 border-slate-200',
 }
 
 export default function Navbar() {
   const { user, logout } = useAuth()
   const [unreadCount, setUnreadCount] = useState(0)
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
   const pollRef = useRef(null)
 
@@ -70,8 +85,11 @@ export default function Navbar() {
 
   const fetchUnread = useCallback(() => {
     if (!user) return
-    getNotifications()
-      .then(r => setUnreadCount(r.data.data.unread_count || 0))
+    getUnreadCount()
+      .then(r => setUnreadCount(r.data?.data?.unread_count || 0))
+      .catch(() => {})
+    getUnreadMessageCount()
+      .then(r => setUnreadMsgCount(r.data?.data?.unread_count || 0))
       .catch(() => {})
   }, [user])
 
@@ -90,6 +108,15 @@ export default function Navbar() {
     window.addEventListener('navbar:unread', handler)
     return () => window.removeEventListener('navbar:unread', handler)
   }, [])
+
+  // Refetch when user returns to this browser tab
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchUnread()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [fetchUnread])
 
   const sharedNavItems = [
     { to: '/dashboard', icon: <LayoutDashboard size={15} />, label: 'Dashboard', show: true },
@@ -117,18 +144,28 @@ export default function Navbar() {
 
   return (
     <>
-      <header className={`sticky top-0 z-40 bg-white/90 backdrop-blur-md ${rc.border} transition-all`}>
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 transition-all">
+        {/* Role gradient strip */}
+        {user && <div className={`h-[3px] bg-gradient-to-r ${rc.gradientBorder}`} />}
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
 
-          {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-2.5 group flex-shrink-0">
-            <div className={`w-8 h-8 ${rc.logoBg} ${rc.logoHover} rounded-xl flex items-center justify-center shadow-sm transition-colors`}>
-              <span className="text-white font-display text-sm font-bold leading-none">S</span>
-            </div>
-            <span className="font-display font-700 text-slate-900 text-base tracking-tight hidden sm:block">
-              SkillMarket
-            </span>
-          </Link>
+          {/* Logo + Role Pill */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Link to="/dashboard" className="flex items-center gap-2.5 group">
+              <div className={`w-8 h-8 ${rc.logoBg} ${rc.logoHover} rounded-xl flex items-center justify-center shadow-sm transition-colors`}>
+                <span className="text-white font-display text-sm font-bold leading-none">S</span>
+              </div>
+              <span className="font-display font-bold text-slate-900 text-base tracking-tight hidden sm:block">
+                SkillMarket
+              </span>
+            </Link>
+            {user && (
+              <span className={`hidden lg:inline-flex items-center text-[10px] font-semibold px-2.5 py-1 rounded-full border ${rc.pillBg}`}>
+                {rc.badgeLabel}
+              </span>
+            )}
+          </div>
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center">
@@ -163,6 +200,11 @@ export default function Navbar() {
                   title="Messages"
                 >
                   <MessageSquare size={17} />
+                  {unreadMsgCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-blue-500 text-white text-[9px] font-bold px-1 leading-none shadow-sm animate-scale-in">
+                      {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+                    </span>
+                  )}
                 </Link>
 
                 {/* Notifications */}
@@ -178,26 +220,22 @@ export default function Navbar() {
                   {unreadCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1 leading-none shadow-sm">
                       {unreadCount > 99 ? '99+' : unreadCount}
+                      <span className="absolute inset-0 rounded-full bg-red-500 animate-dot-pulse opacity-40" />
                     </span>
                   )}
                 </Link>
 
-                {/* Profile */}
+                {/* User avatar + name */}
                 <Link
                   to="/profile"
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors hidden sm:flex"
+                  className="hidden sm:flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-50 transition-colors"
                   title="My Profile"
                 >
-                  <User size={17} />
+                  <div className={`w-7 h-7 rounded-lg ${rc.avatarBg} flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0`}>
+                    {getInitials(user.name)}
+                  </div>
+                  <span className="text-sm font-medium text-slate-700 hidden lg:block max-w-[100px] truncate">{user.name}</span>
                 </Link>
-
-                {/* Role badge */}
-                <span className={`hidden sm:inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl shadow-sm ${rc.badge}`}>
-                  {rc.badgeLabel}
-                </span>
-
-                {/* Name */}
-                <span className="text-sm font-medium text-slate-700 hidden lg:block pl-1 pr-0.5">{user.name}</span>
 
                 {/* Logout */}
                 <button
@@ -220,10 +258,10 @@ export default function Navbar() {
             ) : (
               <>
                 <Link to="/login">
-                  <Button variant="secondary" size="sm">Log in</Button>
+                  <Button variant="ghost" size="sm">Log in</Button>
                 </Link>
                 <Link to="/register">
-                  <Button variant="primary" size="sm">Sign up</Button>
+                  <Button variant="primary" size="sm">Sign up free</Button>
                 </Link>
                 <button
                   onClick={() => setMobileOpen(v => !v)}
@@ -254,7 +292,7 @@ export default function Navbar() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white font-bold text-sm">
-                    {user.name?.[0]?.toUpperCase()}
+                    {getInitials(user.name)}
                   </div>
                   <div>
                     <p className="text-white font-semibold text-sm">{user.name}</p>
@@ -264,7 +302,7 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="flex items-center justify-between px-4 h-14 border-b border-slate-100">
-                <span className="font-display font-700 text-slate-900 text-base">SkillMarket</span>
+                <span className="font-display font-bold text-slate-900 text-base">SkillMarket</span>
                 <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg text-slate-400 hover:bg-slate-100">
                   <X size={18} />
                 </button>
@@ -302,7 +340,12 @@ export default function Navbar() {
                     }
                   >
                     <MessageSquare size={15} /> Messages
-                    <ChevronRight size={14} className="ml-auto opacity-30" />
+                    {unreadMsgCount > 0 && (
+                      <span className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-bold">
+                        {unreadMsgCount}
+                      </span>
+                    )}
+                    {!unreadMsgCount && <ChevronRight size={14} className="ml-auto opacity-30" />}
                   </RouterNavLink>
                   <RouterNavLink
                     to="/notifications"
@@ -319,6 +362,7 @@ export default function Navbar() {
                         {unreadCount}
                       </span>
                     )}
+                    {!unreadCount && <ChevronRight size={14} className="ml-auto opacity-30" />}
                   </RouterNavLink>
                   <RouterNavLink
                     to="/profile"

@@ -4,13 +4,20 @@ import { getPublicProfile } from '../../api/profile'
 import { getUserRatings, submitRating } from '../../api/ratings'
 import { startConversation } from '../../api/messages'
 import { useAuth } from '../../context/AuthContext'
-import { getInitials, colorFor, roleBadge, availabilityOptions } from '../../utils/format'
+import { getInitials, colorFor, roleBadge, availabilityOptions, chipColorClass } from '../../utils/format'
 import toast from 'react-hot-toast'
 import { MapPin, Globe, MessageSquare, Star, Send } from 'lucide-react'
 
-function SkillTag({ label }) {
+// Bug 6: Normalize URLs without protocol
+function normalizeUrl(url) {
+  if (!url) return null
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return 'https://' + url
+}
+
+function SkillTag({ label, index = 0 }) {
   return (
-    <span className="inline-flex items-center px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium border border-brand-100">
+    <span className={chipColorClass(index)}>
       {label}
     </span>
   )
@@ -144,6 +151,7 @@ function SubmitRatingForm({ userId, onSubmitted }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
       <h3 className="text-sm font-semibold text-slate-700">Leave a Review</h3>
+      <p className="text-xs text-slate-400 -mt-2">You can only rate users you've collaborated with on a project or skill swap.</p>
       <div>
         <label className="block text-xs font-semibold text-slate-600 mb-2">Your Rating</label>
         <StarPicker value={score} onChange={setScore} />
@@ -215,13 +223,16 @@ export default function PublicProfile() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4 animate-pulse">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-20 h-20 rounded-full bg-slate-200" />
-            <div className="flex-1 space-y-3">
-              <div className="h-5 bg-slate-200 rounded w-48" />
-              <div className="h-4 bg-slate-100 rounded w-64" />
+      <div className="max-w-2xl mx-auto space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="h-28 skeleton rounded-none" />
+          <div className="px-6 pb-6 -mt-12 relative">
+            <div className="flex items-end gap-5">
+              <div className="w-24 h-24 rounded-full skeleton border-4 border-white" />
+              <div className="flex-1 space-y-3 pt-14">
+                <div className="h-6 skeleton rounded w-48" />
+                <div className="h-4 skeleton rounded w-64" />
+              </div>
             </div>
           </div>
         </div>
@@ -273,23 +284,33 @@ export default function PublicProfile() {
                   </div>
                   {profile.headline && <p className="text-slate-600 mt-1 text-sm">{profile.headline}</p>}
                 </div>
-                <button
-                  onClick={handleMessage}
-                  disabled={startingChat}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm text-white disabled:opacity-60 transition-all flex-shrink-0 font-semibold shadow-sm ${
-                    profile.role === 'student'
-                      ? 'bg-gradient-to-r from-student-500 to-student-600 hover:from-student-600 hover:to-student-700'
-                      : profile.role === 'employer'
-                      ? 'bg-gradient-to-r from-employer-500 to-employer-600 hover:from-employer-600 hover:to-employer-700'
-                      : 'bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800'
-                  }`}
-                >
-                  {startingChat
-                    ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    : <MessageSquare size={14} />
-                  }
-                  Message
-                </button>
+                {me ? (
+                  <button
+                    onClick={handleMessage}
+                    disabled={startingChat}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm text-white disabled:opacity-60 transition-all flex-shrink-0 font-semibold shadow-sm ${
+                      profile.role === 'student'
+                        ? 'bg-gradient-to-r from-student-500 to-student-600 hover:from-student-600 hover:to-student-700'
+                        : profile.role === 'employer'
+                        ? 'bg-gradient-to-r from-employer-500 to-employer-600 hover:from-employer-600 hover:to-employer-700'
+                        : 'bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800'
+                    }`}
+                  >
+                    {startingChat
+                      ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      : <MessageSquare size={14} />
+                    }
+                    Message
+                  </button>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm text-white bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 transition-all flex-shrink-0 font-semibold shadow-sm"
+                  >
+                    <MessageSquare size={14} />
+                    Login to Message
+                  </Link>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-3 mt-3">
@@ -300,7 +321,7 @@ export default function PublicProfile() {
                 )}
                 {profile.website && (
                   <a
-                    href={profile.website}
+                    href={normalizeUrl(profile.website)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-xs text-brand-600 hover:underline"
@@ -318,7 +339,12 @@ export default function PublicProfile() {
                 </span>
               </div>
 
-              {profile.bio && <p className="mt-3 text-sm text-slate-600 leading-relaxed">{profile.bio}</p>}
+              {profile.bio && (
+                <div className="pt-4 border-t border-slate-100 mt-3">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">About</p>
+                  <p className="text-sm text-slate-700 leading-relaxed">{profile.bio}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -326,7 +352,7 @@ export default function PublicProfile() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Skills They Can Teach</h3>
+          <h3 className="section-label !mb-3">Skills They Can Teach</h3>
           {teachSkills.length === 0 ? (
             <p className="text-xs text-slate-400">No skills listed yet.</p>
           ) : (
@@ -340,7 +366,7 @@ export default function PublicProfile() {
           )}
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Skills They Want to Learn</h3>
+          <h3 className="section-label !mb-3">Skills They Want to Learn</h3>
           {learnSkills.length === 0 ? (
             <p className="text-xs text-slate-400">No skills listed yet.</p>
           ) : (

@@ -9,6 +9,7 @@ import {
 import { startConversation } from '../../api/messages'
 import SkillSwapCard from '../../components/SkillSwapCard'
 import StatusBadge from '../../components/ui/StatusBadge'
+import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Button from '../../components/ui/Button'
 import Spinner from '../../components/ui/Spinner'
 
@@ -16,14 +17,23 @@ import Spinner from '../../components/ui/Spinner'
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-5 flex flex-col gap-3 animate-pulse">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-slate-200" />
-        <div className="h-4 bg-slate-200 rounded w-32" />
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-card overflow-hidden">
+      <div className="p-5 flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl skeleton" />
+          <div className="h-4 skeleton w-32" />
+        </div>
+        <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-10 skeleton rounded-xl" />
+            <div className="w-8 h-8 skeleton rounded-full" />
+            <div className="flex-1 h-10 skeleton rounded-xl" />
+          </div>
+        </div>
       </div>
-      <div className="h-3 bg-slate-200 rounded w-3/4" />
-      <div className="h-3 bg-slate-200 rounded w-1/2" />
-      <div className="h-8 bg-slate-200 rounded-xl w-28 mt-1" />
+      <div className="px-5 py-3 border-t border-slate-100">
+        <div className="h-8 skeleton rounded-xl w-full" />
+      </div>
     </div>
   )
 }
@@ -49,6 +59,10 @@ export default function SkillSwap() {
   const [formErrors, setFormErrors] = useState({})
   const [formLoading, setFormLoading] = useState(false)
 
+  // Delete confirmation dialog state
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null })
+  const [deleting, setDeleting] = useState(false)
+
   useEffect(() => {
     setLoading(true)
     getListings()
@@ -57,16 +71,39 @@ export default function SkillSwap() {
         setOtherListings(d.other_listings   ?? [])
         setMyListings(d.my_listings         ?? [])
         setIncomingRequests(d.incoming_requests ?? [])
-        setOutgoingRequests(d.outgoing_requests ?? [])
+        const outgoing = d.outgoing_requests ?? []
+        setOutgoingRequests(outgoing)
+        // Pre-populate sentSet from outgoing requests so buttons persist after refresh
+        // Bug 11: Only include non-rejected requests in sentSet so button resets after rejection
+        const alreadySent = new Set(
+          outgoing
+            .filter(r => r.status !== 'rejected')
+            .map(r => r.swap_id ?? r.listing_id ?? r.skill_swap_id)
+            .filter(Boolean)
+            .map(Number)
+        )
+        setSentSet(alreadySent)
       })
       .catch(err => toast.error(err.response?.data?.message || 'Failed to load listings.'))
       .finally(() => setLoading(false))
   }, [])
 
-  async function handleSendRequest(listingId) {
+  async function handleSendRequest(listingId, listing) {
     try {
       await sendRequest(listingId)
       setSentSet(prev => new Set([...prev, listingId]))
+      // Add optimistic entry to outgoing requests so Requests tab updates immediately
+      if (listing) {
+        setOutgoingRequests(prev => [{
+          id: Date.now(),
+          swap_id: listingId,
+          status: 'pending',
+          teach_skill: listing.teach_skill,
+          learn_skill: listing.learn_skill,
+          owner_name: listing.user_name,
+          created_at: new Date().toISOString(),
+        }, ...prev])
+      }
       toast.success('Request sent!')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send request.')
@@ -108,14 +145,22 @@ export default function SkillSwap() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!window.confirm('Delete this listing?')) return
+  function handleDeleteClick(id) {
+    setDeleteConfirm({ open: true, id })
+  }
+
+  async function handleDeleteConfirm() {
+    const id = deleteConfirm.id
+    setDeleting(true)
     try {
       await deleteListing(id)
       setMyListings(prev => prev.filter(l => l.id !== id))
       toast.success('Listing deleted.')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to delete listing.')
+    } finally {
+      setDeleting(false)
+      setDeleteConfirm({ open: false, id: null })
     }
   }
 
@@ -137,7 +182,7 @@ export default function SkillSwap() {
     <div className="animate-fade-up space-y-6">
       {/* Heading */}
       <div>
-        <h1 className="font-display text-2xl font-700 text-slate-900">Skill Swap</h1>
+        <h1 className="font-display text-2xl font-bold text-slate-900">Skill Swap</h1>
         <p className="text-slate-500 text-sm mt-1">Teach what you know. Learn what you don't.</p>
       </div>
 
@@ -316,7 +361,7 @@ export default function SkillSwap() {
                     </button>
                     {/* Delete */}
                     <button
-                      onClick={() => handleDelete(l.id)}
+                      onClick={() => handleDeleteClick(l.id)}
                       className="text-xs font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
                     >
                       Delete
@@ -378,8 +423,13 @@ export default function SkillSwap() {
                       {r.status === 'accepted' && (
                         <button
                           onClick={async () => {
+                            const otherId = parseInt(r.requester_id || r.from_user_id, 10)
+                            if (!otherId || otherId <= 0) {
+                              toast.error('Cannot start conversation: user not found.')
+                              return
+                            }
                             try {
-                              const res = await startConversation(r.requester_id || r.from_user_id)
+                              const res = await startConversation(otherId)
                               navigate(`/messages/${res.data.data.conversation_id}`)
                             } catch (err) {
                               toast.error(err.response?.data?.message || 'Failed to start conversation.')
@@ -412,13 +462,41 @@ export default function SkillSwap() {
                 {outgoingRequests.map(r => (
                   <div key={r.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center justify-between gap-4 flex-wrap">
                     <div>
-                      <p className="font-semibold text-slate-800 text-sm">{r.owner_name ?? 'User'}</p>
+                      <p className="font-semibold text-slate-800 text-sm">
+                        {r.owner_user_id ? (
+                          <Link to={`/profile/${r.owner_user_id}`} className="hover:text-brand-600 transition-colors">
+                            {r.owner_name ?? 'User'}
+                          </Link>
+                        ) : (r.owner_name ?? 'User')}
+                      </p>
                       <p className="text-xs text-slate-400 mt-0.5">
                         Teach: <span className="text-green-600 font-medium">{r.teach_skill}</span>
                         {' · '}Learn: <span className="text-blue-600 font-medium">{r.learn_skill}</span>
                       </p>
                     </div>
-                    <StatusBadge status={r.status} />
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <StatusBadge status={r.status} />
+                      {r.status === 'accepted' && (
+                        <button
+                          onClick={async () => {
+                            const otherId = parseInt(r.owner_user_id, 10)
+                            if (!otherId || otherId <= 0) {
+                              toast.error('Cannot start conversation: user not found.')
+                              return
+                            }
+                            try {
+                              const res = await startConversation(otherId)
+                              navigate(`/messages/${res.data.data.conversation_id}`)
+                            } catch (err) {
+                              toast.error(err.response?.data?.message || 'Failed to start conversation.')
+                            }
+                          }}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 transition-colors border border-brand-200"
+                        >
+                          💬 Message
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -426,6 +504,17 @@ export default function SkillSwap() {
           </div>
         </div>
       )}
+      {/* Delete listing confirmation dialog */}
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        title="Delete Listing?"
+        message="Are you sure you want to delete this listing? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteConfirm({ open: false, id: null })}
+      />
     </div>
   )
 }

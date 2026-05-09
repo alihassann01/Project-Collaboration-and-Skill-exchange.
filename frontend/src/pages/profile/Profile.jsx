@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react'
 import { getProfile, updateProfile } from '../../api/profile'
-import { getInitials, roleBadge, availabilityOptions } from '../../utils/format'
+import { getInitials, roleBadge, availabilityOptions, chipColorClass } from '../../utils/format'
 import toast from 'react-hot-toast'
 import { MapPin, Globe, Edit2, X, Check, ChevronDown } from 'lucide-react'
 
-function SkillTag({ label }) {
+// Bug 6: Normalize URLs without protocol
+function normalizeUrl(url) {
+  if (!url) return null
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return 'https://' + url
+}
+
+function SkillTag({ label, index = 0 }) {
   return (
-    <span className="inline-flex items-center px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium border border-brand-100">
+    <span className={chipColorClass(index)}>
       {label}
     </span>
   )
@@ -74,6 +81,7 @@ export default function Profile() {
   const [form, setForm] = useState({})
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
 
   useEffect(() => {
     getProfile()
@@ -98,6 +106,7 @@ export default function Profile() {
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Name is required.'); return }
     if (showPasswordFields) {
+      if (!currentPassword) { toast.error('Current password is required.'); return }
       if (newPassword !== confirmPassword) { toast.error('Passwords do not match.'); return }
       if (newPassword && newPassword.length < 8) { toast.error('Password must be at least 8 characters.'); return }
     }
@@ -105,6 +114,7 @@ export default function Profile() {
     setSaving(true)
     const payload = { ...form }
     if (showPasswordFields && newPassword) {
+      payload.current_password = currentPassword
       payload.new_password = newPassword
       payload.new_password_confirmation = confirmPassword
     }
@@ -117,6 +127,7 @@ export default function Profile() {
       setShowPasswordFields(false)
       setNewPassword('')
       setConfirmPassword('')
+      setCurrentPassword('')
       toast.success('Profile updated!')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update profile.')
@@ -130,6 +141,7 @@ export default function Profile() {
     setShowPasswordFields(false)
     setNewPassword('')
     setConfirmPassword('')
+    setCurrentPassword('')
     if (user) {
       setForm({
         name: user.name || '',
@@ -146,13 +158,16 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4 animate-pulse">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-20 h-20 rounded-full bg-slate-200" />
-            <div className="flex-1 space-y-3">
-              <div className="h-5 bg-slate-200 rounded w-48" />
-              <div className="h-4 bg-slate-100 rounded w-64" />
+      <div className="max-w-2xl mx-auto space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="h-28 skeleton rounded-none" />
+          <div className="px-6 pb-6 -mt-12 relative">
+            <div className="flex items-end gap-5">
+              <div className="w-24 h-24 rounded-full skeleton border-4 border-white" />
+              <div className="flex-1 space-y-3 pt-14">
+                <div className="h-6 skeleton rounded w-48" />
+                <div className="h-4 skeleton rounded w-64" />
+              </div>
             </div>
           </div>
         </div>
@@ -294,6 +309,16 @@ export default function Profile() {
               </button>
               {showPasswordFields && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Current Password *</label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={e => setCurrentPassword(e.target.value)}
+                      placeholder="Enter your current password"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-400"
+                    />
+                  </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1">New Password</label>
                     <input
@@ -365,7 +390,7 @@ export default function Profile() {
                     )}
                     {user.website && (
                       <a
-                        href={user.website}
+                        href={normalizeUrl(user.website)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 text-xs text-brand-600 hover:underline"
@@ -383,7 +408,13 @@ export default function Profile() {
                     </span>
                   </div>
 
-                  {user.bio && <p className="mt-3 text-sm text-slate-600 leading-relaxed">{user.bio}</p>}
+                  {/* Bug 14: Bio with "About" section header */}
+                  {user.bio && (
+                    <div className="pt-4 border-t border-slate-100 mt-3">
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">About</p>
+                      <p className="text-sm text-slate-700 leading-relaxed">{user.bio}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -394,7 +425,7 @@ export default function Profile() {
       {/* Skills sections */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Skills I Can Teach</h3>
+          <h3 className="section-label !mb-3">Skills I Can Teach</h3>
           {teachSkills.length === 0 ? (
             <p className="text-xs text-slate-400">No skills listed yet.</p>
           ) : (
@@ -408,7 +439,7 @@ export default function Profile() {
           )}
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Skills I Want to Learn</h3>
+          <h3 className="section-label !mb-3">Skills I Want to Learn</h3>
           {learnSkills.length === 0 ? (
             <p className="text-xs text-slate-400">No skills listed yet.</p>
           ) : (

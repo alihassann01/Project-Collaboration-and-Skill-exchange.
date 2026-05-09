@@ -5,6 +5,7 @@ import { X, Save, Trash2 } from 'lucide-react'
 import { getProject, updateProject, deleteProject } from '../../api/projects'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
+import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Spinner from '../../components/ui/Spinner'
 
 function SkillTagInput({ skills, onAdd, onRemove }) {
@@ -59,7 +60,7 @@ function validate(form) {
   if (!form.description.trim())                 errs.description = 'Description is required.'
   else if (form.description.trim().length < 50) errs.description = 'Description must be at least 50 characters.'
   if (!form.deadline)                           errs.deadline    = 'Deadline is required.'
-  else if (new Date(form.deadline) <= new Date()) errs.deadline  = 'Deadline must be a future date.'
+  else if (new Date(form.deadline) < new Date(new Date().toDateString())) errs.deadline  = 'Deadline must be a future date.'
   return errs
 }
 
@@ -91,6 +92,7 @@ export default function EditProject() {
   const [loading,  setLoading]  = useState(false)
   const [fetching, setFetching] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
 
@@ -150,7 +152,6 @@ export default function EditProject() {
   }
 
   async function handleDelete() {
-    if (!window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) return
     setDeleting(true)
     try {
       await deleteProject(id)
@@ -160,6 +161,7 @@ export default function EditProject() {
       const msg = err.response?.data?.message || 'Failed to delete project.'
       toast.error(msg)
       setDeleting(false)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -176,7 +178,7 @@ export default function EditProject() {
   return (
     <div className="animate-fade-up max-w-2xl">
       <div className="mb-6">
-        <h1 className="font-display text-2xl font-700 text-slate-900">Edit Project</h1>
+        <h1 className="font-display text-2xl font-bold text-slate-900">Edit Project</h1>
         <p className="text-slate-500 text-sm mt-1">Update your project details below.</p>
       </div>
 
@@ -280,13 +282,24 @@ export default function EditProject() {
           <Button
             variant="danger"
             loading={deleting}
-            onClick={handleDelete}
+            onClick={() => setShowDeleteConfirm(true)}
           >
             <Trash2 size={15} /> Delete Project
           </Button>
           <p className="text-xs text-slate-400 mt-2">This cannot be undone.</p>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Delete Project?"
+        message="Are you sure you want to delete this project? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   )
 }

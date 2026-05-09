@@ -49,7 +49,7 @@ export default function AdminDashboard() {
             <div className="inline-flex items-center gap-2 bg-white/15 rounded-xl px-3 py-1.5 mb-3">
               <span className="text-white/90 text-xs font-semibold">⚡ Admin Control Panel</span>
             </div>
-            <h1 className="font-display text-2xl md:text-3xl font-700 text-white leading-tight">
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-white leading-tight">
               Admin Dashboard
             </h1>
             <p className="text-white/70 text-sm mt-1">Monitor users, projects, and platform health.</p>

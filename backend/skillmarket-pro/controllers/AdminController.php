@@ -48,11 +48,34 @@ class AdminController
     {
         if (!self::requireAdmin()) return;
 
+        $page    = max(1, (int)($_GET['page']     ?? 1));
+        $perPage = max(1, min(100, (int)($_GET['per_page'] ?? 20)));
+        $search  = trim($_GET['search'] ?? '');
+
+        $where  = ['1=1'];
+        $params = [];
+        if ($search !== '') {
+            $where[]  = '(name LIKE ? OR email LIKE ?)';
+            $params[] = "%{$search}%";
+            $params[] = "%{$search}%";
+        }
+        $whereStr = implode(' AND ', $where);
+
+        $total = (int) DB::scalar("SELECT COUNT(*) FROM users WHERE {$whereStr}", $params);
+        $offset = ($page - 1) * $perPage;
+
         $users = DB::query(
-            'SELECT id, name, email, role, is_active, created_at FROM users ORDER BY created_at DESC'
+            "SELECT id, name, email, role, is_active, created_at FROM users WHERE {$whereStr} ORDER BY created_at DESC LIMIT {$perPage} OFFSET {$offset}",
+            $params
         );
 
-        Response::success(['users' => $users]);
+        Response::success([
+            'users'      => $users,
+            'total'      => $total,
+            'page'       => $page,
+            'per_page'   => $perPage,
+            'last_page'  => max(1, (int) ceil($total / $perPage)),
+        ]);
     }
 
     // PATCH /api/admin/users/{id}/toggle
@@ -89,15 +112,43 @@ class AdminController
     {
         if (!self::requireAdmin()) return;
 
+        $page    = max(1, (int)($_GET['page']     ?? 1));
+        $perPage = max(1, min(100, (int)($_GET['per_page'] ?? 20)));
+        $search  = trim($_GET['search'] ?? '');
+
+        $where  = ['1=1'];
+        $params = [];
+        if ($search !== '') {
+            $where[]  = '(p.title LIKE ? OR u.name LIKE ?)';
+            $params[] = "%{$search}%";
+            $params[] = "%{$search}%";
+        }
+        $whereStr = implode(' AND ', $where);
+
+        $total = (int) DB::scalar(
+            "SELECT COUNT(*) FROM projects p JOIN users u ON p.employer_id = u.id WHERE {$whereStr}",
+            $params
+        );
+        $offset = ($page - 1) * $perPage;
+
         $projects = DB::query(
-            'SELECT p.id, p.title, u.name AS employer_name, p.status, p.created_at,
+            "SELECT p.id, p.title, p.employer_id, u.name AS employer_name, p.status, p.created_at,
                     (SELECT COUNT(*) FROM applications WHERE project_id = p.id) AS applications_count
              FROM projects p
              JOIN users u ON p.employer_id = u.id
-             ORDER BY p.created_at DESC'
+             WHERE {$whereStr}
+             ORDER BY p.created_at DESC
+             LIMIT {$perPage} OFFSET {$offset}",
+            $params
         );
 
-        Response::success(['projects' => $projects]);
+        Response::success([
+            'projects'   => $projects,
+            'total'      => $total,
+            'page'       => $page,
+            'per_page'   => $perPage,
+            'last_page'  => max(1, (int) ceil($total / $perPage)),
+        ]);
     }
 
     // PATCH /api/admin/projects/{id}/close
@@ -129,6 +180,25 @@ class AdminController
 
         DB::execute('DELETE FROM projects WHERE id = ?', [$id]);
         Response::success([], 'Project deleted.');
+    }
+
+    // PATCH /api/admin/projects/{id}/reopen
+    public static function reopenProject(int $id): void
+    {
+        if (!self::requireAdmin()) return;
+
+        $project = DB::queryOne('SELECT * FROM projects WHERE id = ?', [$id]);
+        if (!$project) { Response::error('Project not found.', 404); return; }
+
+        DB::execute('UPDATE projects SET status = "open", updated_at = NOW() WHERE id = ?', [$id]);
+
+        $updated = DB::queryOne(
+            'SELECT p.id, p.title, u.name AS employer_name, p.status, p.created_at,
+                    (SELECT COUNT(*) FROM applications WHERE project_id = p.id) AS applications_count
+             FROM projects p JOIN users u ON p.employer_id = u.id WHERE p.id = ?',
+            [$id]
+        );
+        Response::success(['project' => $updated], 'Project reopened.');
     }
 
     // GET /api/admin/reports

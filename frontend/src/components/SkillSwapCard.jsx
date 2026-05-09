@@ -1,52 +1,59 @@
 import { Link } from 'react-router-dom'
-import { ArrowRightLeft } from 'lucide-react'
-import { colorFor } from '../utils/format'
+import { ArrowRightLeft, Send, CheckCircle } from 'lucide-react'
+import { getInitials, colorFor } from '../utils/format'
 import Button from './ui/Button'
 
 export default function SkillSwapCard({ listing, onRequest, requestSent }) {
   const avatarBg = colorFor(listing.user_id || 0)
 
   return (
-    <div className="group bg-white rounded-2xl border border-slate-100/80 shadow-card p-5 flex flex-col gap-4
-      hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
-      {/* User */}
-      <div className="flex items-center gap-3">
-        <div
-          className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0 ${avatarBg}`}
-        >
-          {listing.user_name?.[0]?.toUpperCase() || '?'}
+    <div className="group bg-white rounded-2xl border border-slate-100/80 shadow-card overflow-hidden card-hover flex flex-col">
+      <div className="p-5 flex flex-col gap-4 flex-1">
+        {/* User */}
+        <div className="flex items-center gap-3">
+          <div
+            className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm flex-shrink-0 shadow-sm ${avatarBg}`}
+          >
+            {getInitials(listing.user_name || '?')}
+          </div>
+          <div className="min-w-0">
+            <Link to={`/profile/${listing.user_id}`} className="font-semibold text-slate-800 text-sm hover:text-brand-600 transition-colors block truncate">
+              {listing.user_name}
+            </Link>
+            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Skill Exchange</p>
+          </div>
         </div>
-        <Link to={`/profile/${listing.user_id}`} className="font-semibold text-slate-800 text-sm hover:text-brand-600 transition-colors">
-          {listing.user_name}
-        </Link>
+
+        {/* Skills Exchange Visual */}
+        <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+          <div className="flex items-center gap-3 text-[10px] text-slate-400 font-semibold uppercase tracking-wider mb-2">
+            <span className="flex-1 text-center">Can Teach</span>
+            <span className="w-5" />
+            <span className="flex-1 text-center">Wants to Learn</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="flex-1 text-xs font-semibold px-3 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-center truncate">
+              {listing.teach_skill}
+            </span>
+            <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 shadow-sm">
+              <ArrowRightLeft size={14} className="text-slate-400" />
+            </div>
+            <span className="flex-1 text-xs font-semibold px-3 py-2.5 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 text-center truncate">
+              {listing.learn_skill}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Skills Exchange Visual */}
-      <div className="flex items-center gap-3">
-        <span className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 text-center truncate">
-          {listing.teach_skill}
-        </span>
-        <ArrowRightLeft size={16} className="text-slate-300 flex-shrink-0" />
-        <span className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl bg-sky-50 text-sky-700 border border-sky-100 text-center truncate">
-          {listing.learn_skill}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-        <span className="flex-1 text-center">Can Teach</span>
-        <span className="w-4" />
-        <span className="flex-1 text-center">Wants to Learn</span>
-      </div>
-
-      {/* Action */}
-      <div className="pt-1 border-t border-slate-100 mt-auto">
+      {/* Action footer */}
+      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
         {requestSent ? (
-          <span className="text-xs font-semibold text-slate-400 px-3 py-2 rounded-xl bg-slate-50 inline-block">
-            ✓ Request Sent
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100">
+            <CheckCircle size={13} /> Request Sent
           </span>
         ) : (
-          <Button variant="primary" size="sm" onClick={() => onRequest(listing.id)}>
-            Send Request
+          <Button variant="primary" size="sm" onClick={() => onRequest(listing.id, listing)} className="w-full">
+            <Send size={13} /> Send Request
           </Button>
         )}
       </div>

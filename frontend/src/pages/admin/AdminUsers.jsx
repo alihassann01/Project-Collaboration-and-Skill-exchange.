@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Trash2, ToggleLeft, ToggleRight, Shield, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { getAdminUsers, toggleUser, deleteUser } from '../../api/admin'
@@ -21,16 +22,26 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy]       = useState(null)
   const [page, setPage]       = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal]     = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
 
-  useEffect(() => {
-    getAdminUsers()
-      .then(r => setUsers(r.data.data.users ?? []))
+  function fetchUsers(p = page, search = searchTerm) {
+    setLoading(true)
+    getAdminUsers({ page: p, per_page: 10, search })
+      .then(r => {
+        const d = r.data.data
+        setUsers(d.users ?? [])
+        setTotal(d.total ?? 0)
+        setTotalPages(d.last_page ?? 1)
+      })
       .catch(err => toast.error(err.response?.data?.message || 'Failed to load users.'))
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { fetchUsers() }, [page])
 
   async function handleToggle(id) {
     setBusy(id)
@@ -46,44 +57,12 @@ export default function AdminUsers() {
     }
   }
 
-  async function handleDelete() {
-    if (!deleteTarget) return
-    setDeleting(true)
-    try {
-      await deleteUser(deleteTarget.id)
-      setUsers(prev => prev.filter(u => u.id !== deleteTarget.id))
-      toast.success('User deleted.')
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to delete user.')
-    } finally {
-      setDeleting(false)
-      setDeleteTarget(null)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Spinner size="lg" className="text-brand-600" />
-      </div>
-    )
-  }
-
-  const filtered = searchTerm.trim()
-    ? users.filter(u =>
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : users
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-
   return (
     <div className="animate-fade-up space-y-6">
       <div className="flex items-center gap-3">
         <h1 className="font-display text-2xl font-bold text-slate-900">Manage Users</h1>
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">
-          {users.length}
+          {total}
         </span>
       </div>
 
@@ -95,8 +74,9 @@ export default function AdminUsers() {
             <input
               type="text"
               value={searchTerm}
-              onChange={e => { setSearchTerm(e.target.value); setPage(1) }}
-              placeholder="Search users…"
+              onChange={e => { setSearchTerm(e.target.value) }}
+              onKeyDown={e => { if (e.key === 'Enter') { setPage(1); fetchUsers(1, searchTerm) } }}
+              placeholder="Search users… (Enter to search)"
               className="w-full pl-8 pr-3 py-2 rounded-xl text-sm bg-slate-50 border border-slate-200 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 focus:bg-white transition-all"
             />
           </div>
@@ -114,12 +94,16 @@ export default function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {paginated.map((u, i) => (
+              {users.map((u, i) => (
                 <tr
                   key={u.id}
                   className={`border-b border-slate-50 hover:bg-slate-50/70 transition-colors ${i % 2 === 0 ? '' : 'bg-slate-50/30'}`}
                 >
-                  <td className="px-5 py-3 font-medium text-slate-800">{u.name}</td>
+                  <td className="px-5 py-3 font-medium text-slate-800">
+                    <Link to={`/profile/${u.id}`} className="hover:text-brand-600 transition-colors">
+                      {u.name}
+                    </Link>
+                  </td>
                   <td className="px-3 py-3 text-slate-500">{u.email}</td>
                   <td className="px-3 py-3"><RoleBadge role={u.role} /></td>
                   <td className="px-3 py-3">
@@ -181,7 +165,7 @@ export default function AdminUsers() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100">
             <span className="text-xs text-slate-400">
-              Page {page} of {totalPages} ({filtered.length} users)
+              Page {page} of {totalPages} ({total} users)
             </span>
             <div className="flex gap-1">
               <button
@@ -210,7 +194,22 @@ export default function AdminUsers() {
         confirmLabel="Delete"
         variant="danger"
         loading={deleting}
-        onConfirm={handleDelete}
+        onConfirm={async () => {
+          setDeleting(true)
+          try {
+            await deleteUser(deleteTarget.id)
+            // Stay on current page; go back if it was the last item on this page
+            const stayPage = users.length <= 1 && page > 1 ? page - 1 : page
+            setPage(stayPage)
+            fetchUsers(stayPage, searchTerm)
+            toast.success('User deleted.')
+          } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to delete user.')
+          } finally {
+            setDeleting(false)
+            setDeleteTarget(null)
+          }
+        }}
         onCancel={() => setDeleteTarget(null)}
       />
     </div>

@@ -9,10 +9,10 @@ import Button from '../../components/ui/Button'
 
 function SkeletonRow() {
   return (
-    <tr className="border-b border-slate-50 animate-pulse">
+    <tr className="border-b border-slate-50">
       {[1,2,3,4,5].map(i => (
         <td key={i} className="px-6 py-4">
-          <div className="h-4 bg-slate-200 rounded-lg w-3/4" />
+          <div className="h-4 skeleton rounded-lg w-3/4" />
         </td>
       ))}
     </tr>
@@ -54,9 +54,12 @@ export default function MyProjects() {
     <div className="animate-fade-up space-y-6">
       {/* Heading */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-display text-2xl font-700 text-slate-900">My Projects</h1>
+        <div>
+          <h1 className="font-display text-2xl font-bold text-slate-900">My Projects</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Manage your posted projects</p>
+        </div>
         <Link to="/projects/create">
-          <Button variant="primary" size="sm">
+          <Button variant="employer" size="sm">
             <Plus size={15} /> Post New Project
           </Button>
         </Link>

@@ -41,7 +41,9 @@ class DashboardController
         );
 
         $recentApplications = DB::query(
-            "SELECT a.*, p.title AS project_title, p.status AS project_status, u.name AS employer_name
+            "SELECT a.*, a.created_at AS applied_at,
+                    p.title AS project_title, p.status AS project_status,
+                    u.id AS employer_id, u.name AS employer_name
              FROM applications a
              JOIN projects p ON p.id = a.project_id
              JOIN users u ON u.id = p.employer_id
