@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import {
   LogOut, LayoutDashboard, Briefcase, ArrowLeftRight,
   FileText, FolderOpen, Bell, BellRing, User, ShieldCheck,
-  Menu, X, ChevronRight, MessageSquare,
+  Menu, X, ChevronRight, MessageSquare, Users, GraduationCap, Building2,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getUnreadCount } from '../api/notifications'
@@ -23,7 +23,7 @@ const roleConfig = {
     navActive: 'bg-student-50 text-student-700 font-semibold',
     navHover: 'hover:bg-student-50 hover:text-student-600',
     badge: 'bg-gradient-to-r from-student-500 to-student-600 text-white',
-    badgeLabel: '🎓 Student',
+    badgeLabel: 'Student',
     bellActive: 'text-student-600',
     drawerActive: 'bg-student-50 text-student-700',
     avatarBg: 'bg-student-500',
@@ -37,7 +37,7 @@ const roleConfig = {
     navActive: 'bg-employer-50 text-employer-700 font-semibold',
     navHover: 'hover:bg-employer-50 hover:text-employer-600',
     badge: 'bg-gradient-to-r from-employer-500 to-employer-600 text-white',
-    badgeLabel: '🏢 Employer',
+    badgeLabel: 'Employer',
     bellActive: 'text-employer-600',
     drawerActive: 'bg-employer-50 text-employer-700',
     avatarBg: 'bg-employer-500',
@@ -51,7 +51,7 @@ const roleConfig = {
     navActive: 'bg-amber-50 text-amber-700 font-semibold',
     navHover: 'hover:bg-amber-50 hover:text-amber-600',
     badge: 'bg-gradient-to-r from-amber-400 to-amber-600 text-white',
-    badgeLabel: '⚡ Admin',
+    badgeLabel: 'Admin',
     bellActive: 'text-amber-600',
     drawerActive: 'bg-amber-50 text-amber-700',
     avatarBg: 'bg-amber-500',
@@ -120,8 +120,16 @@ export default function Navbar() {
 
   const sharedNavItems = [
     { to: '/dashboard', icon: <LayoutDashboard size={15} />, label: 'Dashboard', show: true },
-    { to: '/projects',  icon: <Briefcase size={15} />,       label: 'Projects',  show: true },
+    { to: '/projects',  icon: <Briefcase size={15} />,       label: 'Projects',  show: !!user },
     { to: '/skill-swap',icon: <ArrowLeftRight size={15} />,  label: 'Skill Swap',show: !!user },
+  ]
+  const publicNavItems = [
+    { to: '/', icon: <LayoutDashboard size={15} />, label: 'Home' },
+    { to: '/about', icon: <Users size={15} />, label: 'About' },
+    { to: '/project-workflow', icon: <Briefcase size={15} />, label: 'Projects' },
+    { to: '/skill-swap-info', icon: <ArrowLeftRight size={15} />, label: 'Skill Swap' },
+    { to: '/for-students', icon: <GraduationCap size={15} />, label: 'Students' },
+    { to: '/for-employers', icon: <Building2 size={15} />, label: 'Employers' },
   ]
   const studentOnlyItems = [
     { to: '/my-applications', icon: <FileText size={15} />, label: 'My Applications', show: user?.role === 'student' },
@@ -133,59 +141,69 @@ export default function Navbar() {
     { to: '/admin', icon: <ShieldCheck size={15} />, label: 'Admin Panel', show: user?.role === 'admin' },
   ]
 
-  const allNavItems = [
+  const allNavItems = user ? [
     ...sharedNavItems,
     ...studentOnlyItems,
     ...employerOnlyItems,
     ...adminOnlyItems,
-  ].filter(i => i.show)
+  ].filter(i => i.show) : publicNavItems
 
   const roleSpecificItems = [...studentOnlyItems, ...employerOnlyItems, ...adminOnlyItems].filter(i => i.show)
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 transition-all">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 transition-all shadow-sm shadow-slate-200/40">
         {/* Role gradient strip */}
         {user && <div className={`h-[3px] bg-gradient-to-r ${rc.gradientBorder}`} />}
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
 
           {/* Logo + Role Pill */}
           <div className="flex items-center gap-3 flex-shrink-0">
-            <Link to="/dashboard" className="flex items-center gap-2.5 group">
-              <div className={`w-8 h-8 ${rc.logoBg} ${rc.logoHover} rounded-xl flex items-center justify-center shadow-sm transition-colors`}>
-                <span className="text-white font-display text-sm font-bold leading-none">S</span>
+            <Link to={user ? '/dashboard' : '/'} className="flex items-center gap-2.5 group">
+              <div className={`w-10 h-10 ${rc.logoBg} ${rc.logoHover} rounded-2xl flex items-center justify-center shadow-card transition-colors ring-1 ring-white/80`}>
+                <span className="text-white font-display text-base font-bold leading-none">S</span>
               </div>
-              <span className="font-display font-bold text-slate-900 text-base tracking-tight hidden sm:block">
+              <span className="font-display font-bold text-slate-950 text-lg tracking-tight hidden sm:block">
                 SkillMarket
               </span>
             </Link>
             {user && (
-              <span className={`hidden lg:inline-flex items-center text-[10px] font-semibold px-2.5 py-1 rounded-full border ${rc.pillBg}`}>
+              <span className={`hidden lg:inline-flex items-center text-[11px] font-semibold px-3 py-1.5 rounded-full border ${rc.pillBg}`}>
                 {rc.badgeLabel}
               </span>
             )}
           </div>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center">
-            {/* Shared items */}
-            <div className="flex items-center gap-0.5">
-              {sharedNavItems.filter(i => i.show).map(item => (
-                <NavItem key={item.to} to={item.to} icon={item.icon} rc={rc}>{item.label}</NavItem>
-              ))}
-            </div>
-
-            {/* Role-specific items with divider */}
-            {roleSpecificItems.length > 0 && (
+          <nav className="hidden md:flex items-center rounded-2xl bg-slate-100/70 p-1 ring-1 ring-white/80">
+            {user ? (
               <>
-                <div className="w-px h-5 bg-slate-200 mx-2" />
+                {/* Shared items */}
                 <div className="flex items-center gap-0.5">
-                  {roleSpecificItems.map(item => (
-                    <NavItem key={item.to} to={item.to} icon={item.icon} rc={rc} roleSpecific>{item.label}</NavItem>
+                  {sharedNavItems.filter(i => i.show).map(item => (
+                    <NavItem key={item.to} to={item.to} icon={item.icon} rc={rc}>{item.label}</NavItem>
                   ))}
                 </div>
+
+                {/* Role-specific items with divider */}
+                {roleSpecificItems.length > 0 && (
+                  <>
+                    <div className="w-px h-5 bg-slate-200 mx-2" />
+                    <div className="flex items-center gap-0.5">
+                      {roleSpecificItems.map(item => (
+                        <NavItem key={item.to} to={item.to} icon={item.icon} rc={rc} roleSpecific>{item.label}</NavItem>
+                      ))}
+                    </div>
+                  </>
+                )}
               </>
+            ) : (
+              <div className="flex items-center gap-0.5">
+                {publicNavItems.map(item => (
+                  <NavItem key={item.to} to={item.to} icon={item.icon} rc={rc}>{item.label}</NavItem>
+                ))}
+              </div>
             )}
           </nav>
 
@@ -196,7 +214,7 @@ export default function Navbar() {
                 {/* Messages */}
                 <Link
                   to="/messages"
-                  className="relative p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors hidden sm:flex"
+                  className="relative p-2.5 rounded-2xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors hidden sm:flex"
                   title="Messages"
                 >
                   <MessageSquare size={17} />
@@ -210,7 +228,7 @@ export default function Navbar() {
                 {/* Notifications */}
                 <Link
                   to="/notifications"
-                  className="relative p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                  className="relative p-2.5 rounded-2xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                   title="Notifications"
                 >
                   {unreadCount > 0
@@ -228,10 +246,10 @@ export default function Navbar() {
                 {/* User avatar + name */}
                 <Link
                   to="/profile"
-                  className="hidden sm:flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-50 transition-colors"
+                  className="hidden sm:flex items-center gap-2 px-2 py-1.5 rounded-2xl hover:bg-slate-100/80 transition-colors"
                   title="My Profile"
                 >
-                  <div className={`w-7 h-7 rounded-lg ${rc.avatarBg} flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0`}>
+                  <div className={`w-8 h-8 rounded-2xl ${rc.avatarBg} flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 shadow-sm`}>
                     {getInitials(user.name)}
                   </div>
                   <span className="text-sm font-medium text-slate-700 hidden lg:block max-w-[100px] truncate">{user.name}</span>
@@ -240,7 +258,7 @@ export default function Navbar() {
                 {/* Logout */}
                 <button
                   onClick={logout}
-                  className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors hidden sm:flex"
+                  className="p-2.5 rounded-2xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors hidden sm:flex"
                   title="Logout"
                 >
                   <LogOut size={16} />
@@ -402,9 +420,9 @@ function NavItem({ to, icon, children, rc, roleSpecific = false }) {
     <RouterNavLink
       to={to}
       className={({ isActive }) =>
-        `flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+        `flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all ${
           isActive
-            ? rc.navActive
+            ? `${rc.navActive} bg-white shadow-sm`
             : `text-slate-500 ${rc.navHover} ${roleSpecific ? 'font-medium' : ''}`
         }`
       }

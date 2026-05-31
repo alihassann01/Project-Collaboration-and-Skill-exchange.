@@ -5,8 +5,7 @@ class AdminController
     private static function requireAdmin(): bool
     {
         if (!Auth::check() || Auth::user()->role !== 'admin') {
-            Response::error('Forbidden.', 403);
-            return false;
+            Response::error('Forbidden.', 403); // exits
         }
         return true;
     }
@@ -51,9 +50,14 @@ class AdminController
         $page    = max(1, (int)($_GET['page']     ?? 1));
         $perPage = max(1, min(100, (int)($_GET['per_page'] ?? 20)));
         $search  = trim($_GET['search'] ?? '');
+        $role    = trim($_GET['role'] ?? '');
 
         $where  = ['1=1'];
         $params = [];
+        if ($role !== '' && in_array($role, ['student', 'employer', 'admin'], true)) {
+            $where[] = 'role = ?';
+            $params[] = $role;
+        }
         if ($search !== '') {
             $where[]  = '(name LIKE ? OR email LIKE ?)';
             $params[] = "%{$search}%";
@@ -115,9 +119,14 @@ class AdminController
         $page    = max(1, (int)($_GET['page']     ?? 1));
         $perPage = max(1, min(100, (int)($_GET['per_page'] ?? 20)));
         $search  = trim($_GET['search'] ?? '');
+        $status  = trim($_GET['status'] ?? '');
 
         $where  = ['1=1'];
         $params = [];
+        if ($status !== '' && in_array($status, ['open', 'in_progress', 'completed', 'closed'], true)) {
+            $where[] = 'p.status = ?';
+            $params[] = $status;
+        }
         if ($search !== '') {
             $where[]  = '(p.title LIKE ? OR u.name LIKE ?)';
             $params[] = "%{$search}%";

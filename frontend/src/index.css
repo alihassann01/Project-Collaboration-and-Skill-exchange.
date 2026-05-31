@@ -11,6 +11,11 @@
     @apply bg-slate-50 text-slate-800 font-sans antialiased;
     min-height: 100vh;
     font-feature-settings: 'cv11', 'ss01';
+    background-image:
+      linear-gradient(135deg, rgba(5,150,105,0.08) 0%, transparent 32%),
+      linear-gradient(225deg, rgba(49,121,255,0.10) 0%, transparent 34%),
+      linear-gradient(180deg, #f7fbff 0%, #f4f9f5 48%, #f8fafc 100%);
+    background-attachment: fixed;
   }
   ::selection { @apply bg-brand-100 text-brand-900; }
 }
@@ -28,7 +33,43 @@
   }
   /* Premium card */
   .card {
-    @apply bg-white rounded-2xl shadow-card border border-slate-100/80;
+    @apply bg-white/95 rounded-2xl shadow-card border border-white/80 backdrop-blur-sm;
+  }
+  .panel-card {
+    @apply bg-white/95 rounded-3xl shadow-card border border-slate-200/60 backdrop-blur-sm overflow-hidden;
+  }
+  .soft-panel {
+    @apply bg-white/85 border border-slate-200/60 shadow-card backdrop-blur-sm;
+  }
+  .editorial-hero {
+    @apply relative overflow-hidden rounded-5xl bg-slate-950 text-white shadow-elevated border border-white/20;
+  }
+  .editorial-image {
+    @apply absolute inset-0 h-full w-full object-cover;
+  }
+  .editorial-overlay {
+    background:
+      linear-gradient(90deg, rgba(3, 15, 27, 0.94) 0%, rgba(3, 15, 27, 0.74) 42%, rgba(3, 15, 27, 0.24) 100%),
+      linear-gradient(180deg, rgba(5, 150, 105, 0.16), rgba(49, 121, 255, 0.12));
+  }
+  .market-card {
+    @apply bg-white rounded-4xl border border-slate-200/70 shadow-card overflow-hidden transition-all duration-300;
+  }
+  .market-card:hover {
+    @apply -translate-y-1 shadow-card-hover border-brand-200/80;
+  }
+  .eyebrow-pill {
+    @apply inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 border border-white/20 text-xs font-bold uppercase tracking-[0.14em];
+  }
+  .public-cta-primary {
+    background: #bff7d3 !important;
+    color: #06111f !important;
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    box-shadow: 0 14px 34px rgba(16, 185, 129, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.18) inset !important;
+  }
+  .public-cta-primary:hover {
+    background: #d9ffe8 !important;
+    color: #06111f !important;
   }
   /* Role-specific navbar underline strip */
   .role-strip-student  { @apply border-b-2 border-student-500; }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Trash2, ToggleLeft, ToggleRight, Shield, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { getAdminUsers, toggleUser, deleteUser } from '../../api/admin'
@@ -18,6 +18,7 @@ function RoleBadge({ role }) {
 }
 
 export default function AdminUsers() {
+  const [searchParams] = useSearchParams()
   const [users, setUsers]     = useState([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy]       = useState(null)
@@ -27,10 +28,16 @@ export default function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const roleFilter = searchParams.get('role') || ''
+  const pageTitle = roleFilter === 'student'
+    ? 'Students'
+    : roleFilter === 'employer'
+      ? 'Employers'
+      : 'Manage Users'
 
   function fetchUsers(p = page, search = searchTerm) {
     setLoading(true)
-    getAdminUsers({ page: p, per_page: 10, search })
+    getAdminUsers({ page: p, per_page: 10, search, role: roleFilter })
       .then(r => {
         const d = r.data.data
         setUsers(d.users ?? [])
@@ -41,7 +48,7 @@ export default function AdminUsers() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchUsers() }, [page])
+  useEffect(() => { fetchUsers(page, searchTerm) }, [page, roleFilter])
 
   async function handleToggle(id) {
     setBusy(id)
@@ -60,10 +67,15 @@ export default function AdminUsers() {
   return (
     <div className="animate-fade-up space-y-6">
       <div className="flex items-center gap-3">
-        <h1 className="font-display text-2xl font-bold text-slate-900">Manage Users</h1>
+        <h1 className="font-display text-2xl font-bold text-slate-900">{pageTitle}</h1>
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">
           {total}
         </span>
+        {roleFilter && (
+          <Link to="/admin/users" className="text-xs font-semibold px-2.5 py-1 rounded-full bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors">
+            All users
+          </Link>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-card overflow-hidden">

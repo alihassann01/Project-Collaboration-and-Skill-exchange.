@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ChevronDown, ChevronUp, ArrowRight, XCircle } from 'lucide-react'
+import { ChevronDown, ChevronUp, ArrowRight, XCircle, Video, ExternalLink } from 'lucide-react'
 import { getMyApplications, withdrawApplication } from '../../api/applications'
 import StatusBadge from '../../components/ui/StatusBadge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
@@ -77,6 +77,17 @@ function ApplicationCard({ app, onWithdrawn }) {
       </div>
 
       <p className="text-xs text-slate-400">Applied {formatted}</p>
+
+      {app.status === 'approved' && app.meeting_link && (
+        <a
+          href={app.meeting_link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-fit items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 border border-emerald-100 hover:bg-emerald-100 transition-colors"
+        >
+          <Video size={15} /> Join Meeting <ExternalLink size={13} />
+        </a>
+      )}
 
       {/* Cover letter toggle */}
       {app.cover_letter && (

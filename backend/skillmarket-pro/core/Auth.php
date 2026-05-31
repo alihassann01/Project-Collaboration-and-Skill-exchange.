@@ -11,6 +11,13 @@ class Auth
         $u = DB::queryOne('SELECT * FROM users WHERE id = ?', [$_SESSION['user_id']]);
         if (!$u) { self::logout(); return null; }
 
+        // Fix 2: Immediately reject banned users and destroy their session,
+        // even if they were banned after their session was created.
+        if (!(bool)$u->is_active) {
+            self::logout();
+            return null;
+        }
+
         self::decodeUser($u);
         self::$user = $u;
         return $u;
@@ -21,9 +28,14 @@ class Auth
         return isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
     }
 
+    /**
+     * Fix 2: check() now delegates to user() so it verifies
+     * the user still exists AND is still active in the database.
+     * The result is cached in self::$user for the rest of the request.
+     */
     public static function check(): bool
     {
-        return !empty($_SESSION['user_id']);
+        return self::user() !== null;
     }
 
     public static function login(object $user): void

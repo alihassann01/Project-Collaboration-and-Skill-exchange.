@@ -5,9 +5,19 @@ import { loginUser, registerUser, logoutUser, getMe } from '../api/auth'
 
 const AuthContext = createContext(null)
 
-// PHP returns user in `data.data.user` or `data.user` depending on endpoint.
+// Backend always returns: { success: true, data: { id, name, email, role, ... } }
+// So res.data.data is the user object in every case.
+// We also check data.data.user and data.user as fallbacks for safety.
 function extractUser(data) {
-  return data?.data?.user ?? data?.user ?? data?.data ?? null
+  const candidates = [
+    data?.data?.user,
+    data?.data,
+    data?.user,
+  ]
+  for (const u of candidates) {
+    if (u && typeof u === 'object' && u.id && u.role) return u
+  }
+  return null
 }
 
 export function AuthProvider({ children }) {
@@ -15,8 +25,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const navigate              = useNavigate()
 
-  // On app load — restore session
-  // GET /api/auth/me returns { success: true, data: { ...user } }
+  // On app load — restore session from backend
   useEffect(() => {
     getMe()
       .then(res => {

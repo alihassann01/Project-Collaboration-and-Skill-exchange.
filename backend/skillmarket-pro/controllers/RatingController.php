@@ -2,8 +2,14 @@
 
 class RatingController
 {
-    // POST /api/ratings/{toUserId}/{projectId}  (auth required)
-    public function store(int $toUserId, int $projectId): void
+    /**
+     * POST /api/ratings/{toUserId}/{projectId}  (auth required)
+     * POST /api/ratings/{toUserId}              (swap rating — no project)
+     *
+     * Fix 1: project_id is nullable. When 0 or null is received (swap rating),
+     * it is stored as NULL in the database instead of 0, avoiding the FK violation.
+     */
+    public function store(int $toUserId, ?int $projectId = null): void
     {
         if (!Auth::check()) {
             Response::error('Unauthenticated.', 401);
@@ -11,6 +17,11 @@ class RatingController
         }
 
         $fromUserId = Auth::id();
+
+        // Normalize: treat 0 as null (swap rating, no project involved)
+        if ($projectId === 0) {
+            $projectId = null;
+        }
 
         if ($fromUserId === $toUserId) {
             Response::error('You cannot rate yourself.', 422);
@@ -28,28 +39,53 @@ class RatingController
         $review = isset($body['review']) ? trim($body['review']) : null;
         if ($review === '') $review = null;
 
-        // Duplicate check
-        $existing = (int)DB::scalar(
-            'SELECT COUNT(*) FROM ratings WHERE from_user_id = ? AND to_user_id = ? AND project_id = ?',
-            [$fromUserId, $toUserId, $projectId]
-        );
+        // Duplicate check — must handle NULL project_id with IS NULL
+        if ($projectId !== null) {
+            $existing = (int)DB::scalar(
+                'SELECT COUNT(*) FROM ratings WHERE from_user_id = ? AND to_user_id = ? AND project_id = ?',
+                [$fromUserId, $toUserId, $projectId]
+            );
+        } else {
+            $existing = (int)DB::scalar(
+                'SELECT COUNT(*) FROM ratings WHERE from_user_id = ? AND to_user_id = ? AND project_id IS NULL',
+                [$fromUserId, $toUserId]
+            );
+        }
         if ($existing > 0) {
             Response::error('You have already reviewed this user for this project.', 409);
             return;
         }
 
+        // Project completion guard — only enforced when a real project_id is supplied.
+        // null project_id means the rating comes from a skill swap (no project involved).
+        if ($projectId !== null) {
+            $project = DB::queryOne('SELECT id, status FROM projects WHERE id = ?', [$projectId]);
+            if (!$project) {
+                Response::error('Project not found.', 404);
+                return;
+            }
+            if ($project->status !== 'completed') {
+                Response::error('Ratings can only be given after the project is marked as completed.', 403);
+                return;
+            }
+        }
+
         // Verify real connection: approved application on project involving both users, OR accepted swap
-        $appConnection = (int)DB::scalar(
-            "SELECT COUNT(*) FROM applications a
-             JOIN projects p ON p.id = a.project_id
-             WHERE a.project_id = ? AND a.status = 'approved'
-               AND (
-                 (a.student_id = ? AND p.employer_id = ?)
-                 OR
-                 (a.student_id = ? AND p.employer_id = ?)
-               )",
-            [$projectId, $fromUserId, $toUserId, $toUserId, $fromUserId]
-        );
+        if ($projectId !== null) {
+            $appConnection = (int)DB::scalar(
+                "SELECT COUNT(*) FROM applications a
+                 JOIN projects p ON p.id = a.project_id
+                 WHERE a.project_id = ? AND a.status = 'approved'
+                   AND (
+                     (a.student_id = ? AND p.employer_id = ?)
+                     OR
+                     (a.student_id = ? AND p.employer_id = ?)
+                   )",
+                [$projectId, $fromUserId, $toUserId, $toUserId, $fromUserId]
+            );
+        } else {
+            $appConnection = 0;
+        }
 
         $swapConnection = (int)DB::scalar(
             "SELECT COUNT(*) FROM swap_requests sr
@@ -72,18 +108,26 @@ class RatingController
         );
 
         $newRating = DB::queryOne(
-            'SELECT * FROM ratings WHERE from_user_id = ? AND to_user_id = ? AND project_id = ? ORDER BY id DESC LIMIT 1',
-            [$fromUserId, $toUserId, $projectId]
+            $projectId !== null
+                ? 'SELECT * FROM ratings WHERE from_user_id = ? AND to_user_id = ? AND project_id = ? ORDER BY id DESC LIMIT 1'
+                : 'SELECT * FROM ratings WHERE from_user_id = ? AND to_user_id = ? AND project_id IS NULL ORDER BY id DESC LIMIT 1',
+            $projectId !== null
+                ? [$fromUserId, $toUserId, $projectId]
+                : [$fromUserId, $toUserId]
         );
 
         // Notification
         $from = Auth::user();
+        $notifBody = $projectId !== null
+            ? $from->name . ' left you a ' . $score . '-star review for project #' . $projectId
+            : $from->name . ' left you a ' . $score . '-star review from a skill swap';
+
         DB::execute(
             'INSERT INTO notifications (user_id, type, title, body, link, is_read, created_at)
              VALUES (?, "rating", "New Review Received ⭐", ?, ?, 0, NOW())',
             [
                 $toUserId,
-                $from->name . ' left you a ' . $score . '-star review for project #' . $projectId,
+                $notifBody,
                 '/profile/' . $toUserId,
             ]
         );

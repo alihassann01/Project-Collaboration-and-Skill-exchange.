@@ -59,6 +59,11 @@ function validate(form, skills) {
   else if (form.description.trim().length < 50) errs.description = 'Description must be at least 50 characters.'
   if (!form.deadline)                         errs.deadline    = 'Deadline is required.'
   else if (new Date(form.deadline) < new Date(new Date().toDateString())) errs.deadline = 'Deadline must be a future date.'
+  const bMin = form.budget_min !== '' ? Number(form.budget_min) : null
+  const bMax = form.budget_max !== '' ? Number(form.budget_max) : null
+  if (bMin !== null && bMin < 0)              errs.budget_min  = 'Budget cannot be negative.'
+  if (bMax !== null && bMax < 0)              errs.budget_max  = 'Budget cannot be negative.'
+  if (bMin !== null && bMax !== null && bMax < bMin) errs.budget_max = 'Max budget must be greater than or equal to min budget.'
   return errs
 }
 
@@ -182,8 +187,9 @@ export default function CreateProject() {
                 value={form.budget_min}
                 onChange={set('budget_min')}
                 placeholder="e.g. 5000"
-                className={selectClass}
+                className={`${selectClass} ${errors.budget_min ? 'border-red-400 bg-red-50' : ''}`}
               />
+              {errors.budget_min && <p className="text-xs text-red-500 font-medium">{errors.budget_min}</p>}
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-slate-700">Budget Max (PKR) <span className="text-slate-400 font-normal">optional</span></label>
@@ -193,8 +199,9 @@ export default function CreateProject() {
                 value={form.budget_max}
                 onChange={set('budget_max')}
                 placeholder="e.g. 20000"
-                className={selectClass}
+                className={`${selectClass} ${errors.budget_max ? 'border-red-400 bg-red-50' : ''}`}
               />
+              {errors.budget_max && <p className="text-xs text-red-500 font-medium">{errors.budget_max}</p>}
             </div>
           </div>
 

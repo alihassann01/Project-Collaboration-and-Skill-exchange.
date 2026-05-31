@@ -5,6 +5,8 @@ class SkillSwapController
     // GET /api/skill-swap
     public function index(): void
     {
+        $this->ensureMeetingSchema();
+
         if (!Auth::check()) {
             Response::error('Unauthenticated.', 401);
         }
@@ -44,7 +46,7 @@ class SkillSwapController
 
         // Incoming requests — people requesting MY listings
         $incomingRequests = DB::query(
-            'SELECT sr.id, sr.swap_id, sr.from_user_id AS requester_id, sr.status, sr.created_at,
+            'SELECT sr.id, sr.swap_id, sr.from_user_id AS requester_id, sr.status, sr.meeting_link, sr.created_at,
         ss.teach_skill, ss.learn_skill,
         u.name AS requester_name
              FROM swap_requests sr
@@ -57,7 +59,7 @@ class SkillSwapController
 
         // Outgoing requests — requests I sent to others
         $outgoingRequests = DB::query(
-            'SELECT sr.id, sr.swap_id, sr.status, sr.created_at,
+            'SELECT sr.id, sr.swap_id, sr.status, sr.meeting_link, sr.created_at,
                     ss.teach_skill, ss.learn_skill, ss.user_id AS owner_user_id,
                     u.name AS owner_name
              FROM swap_requests sr
@@ -128,12 +130,14 @@ class SkillSwapController
             Response::error('Swap not found, not active, or you cannot request your own listing.', 400);
         }
 
+        // Fix 11: Block any existing request regardless of status (pending, accepted, or rejected),
+        // not just pending ones. Prevents infinite re-sending after rejection.
         $existing = DB::scalar(
-            'SELECT COUNT(*) FROM swap_requests WHERE from_user_id = ? AND swap_id = ? AND status = "pending"',
+            'SELECT COUNT(*) FROM swap_requests WHERE from_user_id = ? AND swap_id = ?',
             [Auth::id(), $swapId]
         );
         if ($existing) {
-            Response::error('You already have a pending request for this swap.', 400);
+            Response::error('You have already sent a request for this swap.', 400);
         }
 
         DB::insert(
@@ -205,6 +209,66 @@ class SkillSwapController
         Response::success([], 'Response recorded.');
     }
 
+    public function updateMeeting(int $reqId): void
+    {
+        $this->ensureMeetingSchema();
+
+        if (!Auth::check()) {
+            Response::error('Unauthenticated.', 401);
+        }
+
+        $req = DB::queryOne(
+            'SELECT sr.*, ss.teach_skill, ss.learn_skill
+             FROM swap_requests sr
+             JOIN skill_swaps ss ON ss.id = sr.swap_id
+             WHERE sr.id = ? AND (sr.from_user_id = ? OR sr.to_user_id = ?)',
+            [$reqId, Auth::id(), Auth::id()]
+        );
+        if (!$req) {
+            Response::error('Request not found or not authorized.', 403);
+        }
+
+        if ($req->status !== 'accepted') {
+            Response::error('Meeting links can only be added after a swap request is accepted.', 409);
+        }
+
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+        $meetingLink = trim($body['meeting_link'] ?? '');
+
+        if ($meetingLink !== '') {
+            if (!preg_match('/^https?:\/\//i', $meetingLink)) {
+                $meetingLink = 'https://' . $meetingLink;
+            }
+            if (!filter_var($meetingLink, FILTER_VALIDATE_URL)) {
+                Response::error('Validation failed.', 422, ['meeting_link' => 'Enter a valid meeting URL.']);
+            }
+        } else {
+            $meetingLink = null;
+        }
+
+        DB::execute(
+            'UPDATE swap_requests SET meeting_link = ?, updated_at = NOW() WHERE id = ?',
+            [$meetingLink, $reqId]
+        );
+
+        $otherUserId = (int)$req->from_user_id === (int)Auth::id()
+            ? (int)$req->to_user_id
+            : (int)$req->from_user_id;
+
+        if ($meetingLink) {
+            createNotification(
+                $otherUserId,
+                'swap_meeting',
+                'Skill Swap Meeting Link',
+                Auth::user()->name . ' added a meeting link for your skill swap.',
+                '/skill-swap'
+            );
+        }
+
+        $req = DB::queryOne('SELECT * FROM swap_requests WHERE id = ?', [$reqId]);
+        Response::success($req, $meetingLink ? 'Meeting link saved.' : 'Meeting link removed.');
+    }
+
     // PATCH /api/skill-swap/{id}/toggle
     public function toggle(int $id): void
     {
@@ -247,5 +311,21 @@ class SkillSwapController
         DB::execute('DELETE FROM skill_swaps WHERE id = ?', [$id]);
 
         Response::success([], 'Listing deleted.');
+    }
+
+    private function ensureMeetingSchema(): void
+    {
+        static $done = false;
+        if ($done) return;
+
+        $exists = DB::queryOne(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'swap_requests' AND COLUMN_NAME = 'meeting_link'"
+        );
+        if (!$exists) {
+            DB::execute('ALTER TABLE swap_requests ADD COLUMN meeting_link VARCHAR(500) NULL');
+        }
+
+        $done = true;
     }
 }

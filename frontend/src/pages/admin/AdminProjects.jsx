@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Trash2, XCircle, RefreshCw, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { getAdminProjects, closeProject, reopenProject, deleteAdminProject } from '../../api/admin'
@@ -10,6 +10,7 @@ import Spinner from '../../components/ui/Spinner'
 const PAGE_SIZE = 10
 
 export default function AdminProjects() {
+  const [searchParams] = useSearchParams()
   const [projects, setProjects] = useState([])
   const [loading, setLoading]   = useState(true)
   const [busy, setBusy]         = useState(null)
@@ -23,10 +24,12 @@ export default function AdminProjects() {
   const [closing, setClosing] = useState(false)
   const [reopenTarget, setReopenTarget] = useState(null)
   const [reopening, setReopening] = useState(false)
+  const statusFilter = searchParams.get('status') || ''
+  const pageTitle = statusFilter === 'open' ? 'Open Projects' : 'Manage Projects'
 
   function fetchProjects(p = page, search = searchQuery) {
     setLoading(true)
-    getAdminProjects({ page: p, per_page: 10, search })
+    getAdminProjects({ page: p, per_page: 10, search, status: statusFilter })
       .then(r => {
         const d = r.data.data
         setProjects(d.projects ?? [])
@@ -37,16 +40,21 @@ export default function AdminProjects() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchProjects() }, [page])
+  useEffect(() => { fetchProjects(page, searchQuery) }, [page, statusFilter])
 
   return (
     <div className="animate-fade-up space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <h1 className="font-display text-2xl font-bold text-slate-900">Manage Projects</h1>
+          <h1 className="font-display text-2xl font-bold text-slate-900">{pageTitle}</h1>
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">
             {total}
           </span>
+          {statusFilter && (
+            <Link to="/admin/projects" className="text-xs font-semibold px-2.5 py-1 rounded-full bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors">
+              All projects
+            </Link>
+          )}
         </div>
         <form onSubmit={e => { e.preventDefault(); setPage(1); fetchProjects(1, searchQuery) }} className="flex gap-2">
           <div className="relative">
@@ -85,7 +93,9 @@ export default function AdminProjects() {
                   className={`border-b border-slate-50 hover:bg-slate-50/70 transition-colors ${i % 2 === 0 ? '' : 'bg-slate-50/30'}`}
                 >
                   <td className="px-5 py-3">
-                    <p className="font-medium text-slate-800 max-w-[200px] truncate">{p.title}</p>
+                    <Link to={`/projects/${p.id}`} className="block font-medium text-slate-800 hover:text-brand-600 transition-colors max-w-[200px] truncate">
+                      {p.title}
+                    </Link>
                   </td>
                   <td className="px-3 py-3 text-slate-500">
                     {p.employer_id ? (

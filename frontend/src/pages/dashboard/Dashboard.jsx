@@ -13,7 +13,12 @@ import StatCard from '../../components/ui/StatCard'
 import Spinner from '../../components/ui/Spinner'
 import Button from '../../components/ui/Button'
 
-
+const heroImages = {
+  public: 'https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1600&q=85',
+  student: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=85',
+  employer: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=85',
+  admin: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1200&q=85',
+}
 
 // ─── Skeleton loader ────────────────────────────────────────────────────────
 function Skeleton({ className = '' }) {
@@ -37,59 +42,84 @@ function PublicDashboard() {
   return (
     <div className="animate-fade-up space-y-12">
       {/* Hero */}
-      <div className="relative text-center py-20 px-4 rounded-3xl overflow-hidden bg-gradient-to-br from-slate-900 via-brand-950 to-slate-900">
-        <div className="grid-pattern absolute inset-0" />
-        <div className="absolute inset-0 bg-gradient-radial from-brand-600/30 via-transparent to-transparent" />
-        <div className="relative z-10">
-          <h1 className="font-display text-4xl sm:text-5xl font-bold text-white tracking-tight leading-tight max-w-2xl mx-auto">
-            Find Projects.{' '}
-            <span className="bg-gradient-to-r from-emerald-300 to-brand-300 bg-clip-text text-transparent">Share Skills.</span>{' '}
-            Grow Together.
+      <div className="editorial-hero min-h-[520px]">
+        <img src={heroImages.public} alt="" className="editorial-image" />
+        <div className="absolute inset-0 editorial-overlay" />
+        <div className="relative z-10 min-h-[520px] flex items-center px-6 md:px-12 py-12">
+          <div className="max-w-3xl">
+            <div className="eyebrow-pill mb-6">
+              <Target size={14} /> SkillMarket
+            </div>
+            <h1 className="font-display text-5xl md:text-7xl font-bold text-white tracking-tight leading-[0.96]">
+              Real projects for students and employers.
           </h1>
-          <p className="mt-4 text-slate-300 text-lg max-w-xl mx-auto">
-            SkillMarket connects students with real projects and lets you exchange skills with peers.
+          <p className="mt-6 text-white/78 text-lg md:text-xl max-w-2xl leading-relaxed">
+            Discover project work, exchange practical skills, and build career momentum in one elegant workspace.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3 justify-center">
+          <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/projects">
-              <button className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white px-6 py-3 rounded-xl font-semibold text-base hover:bg-white/20 transition-colors">
+              <button className="inline-flex items-center gap-2 bg-white text-slate-950 px-6 py-3 rounded-full font-bold text-base hover:bg-emerald-50 transition-colors shadow-card">
                 Browse Projects <ArrowRight size={16} />
               </button>
             </Link>
             <Link to="/register">
-              <button className="inline-flex items-center gap-2 bg-white text-brand-700 px-6 py-3 rounded-xl font-semibold text-base hover:bg-brand-50 transition-colors shadow-sm">
+              <button className="inline-flex items-center gap-2 bg-white/10 border border-white/25 text-white px-6 py-3 rounded-full font-bold text-base hover:bg-white/20 transition-colors">
                 Get Started Free <ArrowRight size={16} />
               </button>
             </Link>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Feature cards */}
-      <div className="grid sm:grid-cols-3 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          ['53+', 'Projects'],
+          ['760+', 'Learning partners'],
+          ['318K+', 'Learner moments'],
+          ['20M+', 'Practice hours'],
+        ].map(([value, label]) => (
+          <div key={label} className="panel-card rounded-4xl p-6 text-center">
+            <p className="font-display text-3xl md:text-4xl font-bold text-slate-950">{value}</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-slate-400 font-bold mt-2">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
         {[
           {
             icon: <Target size={28} className="text-brand-600" />,
             title: 'Real Projects',
             desc: 'Work on live projects posted by employers',
-            bgClass: 'bg-brand-50',
+            img: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=900&q=80',
           },
           {
             icon: <ArrowLeftRight size={28} className="text-emerald-600" />,
             title: 'Skill Swap',
             desc: 'Teach what you know, learn what you don\'t',
-            bgClass: 'bg-emerald-50',
+            img: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=900&q=80',
           },
           {
             icon: <Trophy size={28} className="text-amber-600" />,
             title: 'Build Portfolio',
             desc: 'Gain experience and grow your profile',
-            bgClass: 'bg-amber-50',
+            img: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80',
           },
-        ].map(({ icon, title, desc, bgClass }) => (
-          <div key={title} className="bg-white rounded-2xl shadow-card border border-slate-100 p-6 text-center hover:shadow-card-hover transition-all group">
-            <div className={`w-14 h-14 rounded-2xl ${bgClass} flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform`}>{icon}</div>
-            <h3 className="font-display font-bold text-slate-900 text-lg mb-1">{title}</h3>
-            <p className="text-slate-500 text-sm">{desc}</p>
+        ].map(({ icon, title, desc, img }) => (
+          <div key={title} className="market-card group">
+            <div className="relative h-48 overflow-hidden">
+              <img src={img} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 to-transparent" />
+              <div className="absolute left-5 bottom-5 w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-card">
+                {icon}
+              </div>
+            </div>
+            <div className="p-6">
+              <h3 className="font-display font-bold text-slate-950 text-2xl mb-2">{title}</h3>
+              <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
+            </div>
           </div>
         ))}
       </div>
@@ -110,20 +140,22 @@ function StudentDashboard({ data, name }) {
   return (
     <div className="animate-fade-up space-y-6">
       {/* Hero Banner */}
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-student-500 via-student-600 to-brand-700 p-6 md:p-8">
-        <div className="grid-pattern absolute inset-0" />
-        <div className="relative z-10 flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-white/15 rounded-xl px-3 py-1.5 mb-3">
-              <span className="text-white/90 text-xs font-semibold">🎓 Student Dashboard</span>
+      <div className="editorial-hero min-h-[360px]">
+        <img src={heroImages.student} alt="" className="editorial-image" />
+        <div className="absolute inset-0 editorial-overlay" />
+        <div className="relative z-10 min-h-[360px] flex items-center justify-between flex-wrap gap-6 p-6 md:p-10">
+          <div className="max-w-2xl">
+            <div className="eyebrow-pill mb-5">
+              <GraduationCap size={14} className="text-white" />
+              <span>Student workspace</span>
             </div>
-            <h1 className="font-display text-2xl md:text-3xl font-bold text-white leading-tight">
-              Welcome back, {name}! 👋
+            <h1 className="font-display text-4xl md:text-6xl font-bold text-white leading-[0.96] tracking-tight">
+              Welcome back, {name}
             </h1>
-            <p className="text-white/70 text-sm mt-1">Track your applications and discover new opportunities.</p>
+            <p className="text-white/78 text-base md:text-lg mt-5 max-w-xl leading-relaxed">Track applications, find active projects, and keep your skill exchange momentum in one polished workspace.</p>
           </div>
           <Link to="/projects">
-            <button className="flex items-center gap-2 bg-white text-student-700 px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-student-50 transition-all shadow-sm active:scale-[0.97]">
+            <button className="flex items-center gap-2 bg-white text-slate-950 px-6 py-3 rounded-full font-bold text-sm hover:bg-emerald-50 transition-all shadow-card active:scale-[0.97]">
               Browse Projects <ArrowRight size={15} />
             </button>
           </Link>
@@ -148,29 +180,29 @@ function StudentDashboard({ data, name }) {
 
       {/* Quick links */}
       <div className="grid sm:grid-cols-2 gap-4">
-        <Link to="/skill-swap" className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-brand-200 transition-all group">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+        <Link to="/skill-swap" className="soft-panel rounded-2xl p-5 flex items-center gap-4 hover:shadow-card-hover hover:border-brand-200 transition-all group">
+          <div className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
             <ArrowLeftRight size={18} className="text-blue-600" />
           </div>
           <div>
-            <p className="font-semibold text-slate-800 text-sm">Browse Skill Swap →</p>
+            <p className="font-semibold text-slate-800 text-sm">Browse Skill Swap</p>
             <p className="text-xs text-slate-400 mt-0.5">Teach what you know, learn what you don't</p>
           </div>
         </Link>
-        <Link to="/projects" className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4 hover:shadow-md hover:border-brand-200 transition-all group">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+        <Link to="/projects" className="soft-panel rounded-2xl p-5 flex items-center gap-4 hover:shadow-card-hover hover:border-brand-200 transition-all group">
+          <div className="w-11 h-11 rounded-2xl bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
             <Briefcase size={18} className="text-purple-600" />
           </div>
           <div>
-            <p className="font-semibold text-slate-800 text-sm">Browse Projects →</p>
+            <p className="font-semibold text-slate-800 text-sm">Browse Projects</p>
             <p className="text-xs text-slate-400 mt-0.5">Find real-world projects to work on</p>
           </div>
         </Link>
       </div>
 
       {/* Recent applications */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className="panel-card">
+        <div className="px-6 py-4 border-b border-slate-100/80 flex items-center justify-between bg-white/70">
           <h2 className="font-display font-bold text-slate-900">Recent Applications</h2>
           <Link to="/my-applications" className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors">
             View all →
@@ -232,20 +264,22 @@ function EmployerDashboard({ data, name }) {
   return (
     <div className="animate-fade-up space-y-6">
       {/* Hero Banner */}
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-employer-500 via-employer-600 to-employer-800 p-6 md:p-8">
-        <div className="grid-pattern absolute inset-0" />
-        <div className="relative z-10 flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-white/15 rounded-xl px-3 py-1.5 mb-3">
-              <span className="text-white/90 text-xs font-semibold">🏢 Employer Dashboard</span>
+      <div className="editorial-hero min-h-[360px]">
+        <img src={heroImages.employer} alt="" className="editorial-image" />
+        <div className="absolute inset-0 editorial-overlay" />
+        <div className="relative z-10 min-h-[360px] flex items-center justify-between flex-wrap gap-6 p-6 md:p-10">
+          <div className="max-w-2xl">
+            <div className="eyebrow-pill mb-5">
+              <Building2 size={14} className="text-white" />
+              <span>Employer workspace</span>
             </div>
-            <h1 className="font-display text-2xl md:text-3xl font-bold text-white leading-tight">
-              Welcome back, {name}! 👋
+            <h1 className="font-display text-4xl md:text-6xl font-bold text-white leading-[0.96] tracking-tight">
+              Welcome back, {name}
             </h1>
-            <p className="text-white/70 text-sm mt-1">Manage your projects and review incoming talent.</p>
+            <p className="text-white/78 text-base md:text-lg mt-5 max-w-xl leading-relaxed">Manage live listings, review applicants, and keep project momentum visible at a glance.</p>
           </div>
           <Link to="/projects/create">
-            <button className="flex items-center gap-2 bg-white text-employer-700 px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-employer-50 transition-colors shadow-sm">
+            <button className="flex items-center gap-2 bg-white text-slate-950 px-6 py-3 rounded-full font-bold text-sm hover:bg-emerald-50 transition-colors shadow-card">
               <Plus size={15} /> Post Project
             </button>
           </Link>
@@ -266,8 +300,8 @@ function EmployerDashboard({ data, name }) {
       </div>
 
       {/* Recent projects */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className="panel-card">
+        <div className="px-6 py-4 border-b border-slate-100/80 flex items-center justify-between bg-white/70">
           <h2 className="font-display font-bold text-slate-900">Recent Projects</h2>
           <Link to="/my-projects" className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors">
             View all →
@@ -307,7 +341,13 @@ function EmployerDashboard({ data, name }) {
                     : '—'
                   return (
                     <tr key={p.id ?? i} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-3 font-medium text-slate-800">{p.title}</td>
+                      <td className="px-6 py-3 font-medium text-slate-800">
+                        {p.id ? (
+                          <Link to={`/projects/${p.id}`} className="text-brand-600 hover:text-brand-700 hover:underline transition-colors font-semibold">
+                            {p.title}
+                          </Link>
+                        ) : p.title}
+                      </td>
                       <td className="px-6 py-3"><StatusBadge status={p.status} /></td>
                       <td className="px-6 py-3 text-slate-600">{p.applications_count ?? 0}</td>
                       <td className="px-6 py-3 text-slate-600 text-xs">{budgetStr}</td>

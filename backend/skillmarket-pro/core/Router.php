@@ -11,7 +11,7 @@ class Router
     public function add(string $method, string $pattern, callable $handler): void
     {
         // Convert {param} to named capture groups
-        $regex = preg_replace('/\{([a-z_]+)\}/', '(?P<$1>[^/]+)', $pattern);
+        $regex = preg_replace('/\{([A-Za-z_][A-Za-z0-9_]*)\}/', '(?P<$1>[^/]+)', $pattern);
         $regex = '#^' . $regex . '$#';
         $this->routes[] = compact('method', 'pattern', 'regex', 'handler');
     }
@@ -33,6 +33,6 @@ class Router
             return;
         }
 
-        abort(404, 'Page not found.');
+        Response::error('Not found.', 404);
     }
 }

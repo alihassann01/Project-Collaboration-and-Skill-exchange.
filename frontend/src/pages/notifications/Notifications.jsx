@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { getNotifications, markOneRead, markAllRead } from '../../api/notifications'
 import { timeAgo } from '../../utils/time'
 import toast from 'react-hot-toast'
-import { Bell, MessageSquare, RefreshCw, CheckSquare, Briefcase, FileText, Star } from 'lucide-react'
+import { Bell, MessageSquare, RefreshCw, CheckSquare, Briefcase, FileText, Star, ExternalLink } from 'lucide-react'
 
 
 
 const typeIcons = {
-  message:      <MessageSquare size={18} className="text-brand-500" />,
+  message: <MessageSquare size={18} className="text-brand-500" />,
   swap_request: <RefreshCw size={18} className="text-violet-500" />,
-  swap_response:<CheckSquare size={18} className="text-teal-500" />,
-  project:      <Briefcase size={18} className="text-amber-500" />,
-  application:  <FileText size={18} className="text-blue-500" />,
-  rating:       <Star size={18} className="text-yellow-500" />,
+  swap_response: <CheckSquare size={18} className="text-teal-500" />,
+  project: <Briefcase size={18} className="text-amber-500" />,
+  application: <FileText size={18} className="text-blue-500" />,
+  rating: <Star size={18} className="text-yellow-500" />,
 }
 const defaultIcon = <Bell size={18} className="text-slate-400" />
 
@@ -108,16 +108,14 @@ export default function Notifications() {
           </div>
         ) : (
           items.map((item, i) => (
-            <button
+            <div
               key={item.id}
               onClick={() => handleClick(item)}
-              className={`w-full flex items-start gap-3 px-5 py-4 text-left transition-colors hover:bg-slate-50 ${
-                i < items.length - 1 ? 'border-b border-slate-100' : ''
-              } ${!item.is_read ? 'bg-blue-50 border-l-4 border-l-brand-400' : ''}`}
+              className={`w-full flex items-start gap-3 px-5 py-4 text-left transition-colors hover:bg-slate-50 cursor-pointer ${i < items.length - 1 ? 'border-b border-slate-100' : ''
+                } ${!item.is_read ? 'bg-blue-50 border-l-4 border-l-brand-400' : ''}`}
             >
-              <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center mt-0.5 ${
-                !item.is_read ? 'bg-brand-100' : 'bg-slate-100'
-              }`}>
+              <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center mt-0.5 ${!item.is_read ? 'bg-brand-100' : 'bg-slate-100'
+                }`}>
                 {typeIcons[item.type] || defaultIcon}
               </div>
               <div className="flex-1 min-w-0">
@@ -127,9 +125,17 @@ export default function Notifications() {
                 {item.body && (
                   <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{item.body}</p>
                 )}
+                {item.link && (
+                  <span
+                    onClick={e => { e.stopPropagation(); navigate(item.link) }}
+                    className="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 font-medium mt-1 transition-colors"
+                  >
+                    View <ExternalLink size={10} />
+                  </span>
+                )}
               </div>
               <span className="text-xs text-slate-400 flex-shrink-0 mt-0.5">{timeAgo(item.created_at)}</span>
-            </button>
+            </div>
           ))
         )}
       </div>

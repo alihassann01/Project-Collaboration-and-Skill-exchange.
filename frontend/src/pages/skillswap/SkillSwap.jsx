@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { Plus, X, Search } from 'lucide-react'
+import { Plus, X, Search, Video, ExternalLink, Save } from 'lucide-react'
 import {
   getListings, createListing, sendRequest,
-  respondRequest, toggleListing, deleteListing,
+  respondRequest, toggleListing, deleteListing, updateSwapMeeting,
 } from '../../api/skillswap'
 import { startConversation } from '../../api/messages'
 import SkillSwapCard from '../../components/SkillSwapCard'
@@ -62,6 +62,7 @@ export default function SkillSwap() {
   // Delete confirmation dialog state
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null })
   const [deleting, setDeleting] = useState(false)
+  const [savingMeeting, setSavingMeeting] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -101,6 +102,7 @@ export default function SkillSwap() {
           teach_skill: listing.teach_skill,
           learn_skill: listing.learn_skill,
           owner_name: listing.user_name,
+          owner_user_id: listing.user_id,
           created_at: new Date().toISOString(),
         }, ...prev])
       }
@@ -174,6 +176,62 @@ export default function SkillSwap() {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to respond.')
     }
+  }
+
+  async function handleSwapMeeting(requestId, meetingLink) {
+    setSavingMeeting(requestId)
+    try {
+      const res = await updateSwapMeeting(requestId, meetingLink)
+      const updated = res.data.data
+      const patch = r => r.id === requestId ? { ...r, meeting_link: updated.meeting_link } : r
+      setIncomingRequests(prev => prev.map(patch))
+      setOutgoingRequests(prev => prev.map(patch))
+      toast.success(res.data.message || 'Meeting link saved.')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save meeting link.')
+    } finally {
+      setSavingMeeting(null)
+    }
+  }
+
+  function renderMeetingTools(request) {
+    if (request.status !== 'accepted') return null
+    return (
+      <form
+        onSubmit={e => {
+          e.preventDefault()
+          handleSwapMeeting(request.id, e.currentTarget.elements.meeting_link.value)
+        }}
+        className="flex flex-wrap items-center gap-2"
+      >
+        <div className="relative">
+          <Video size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            name="meeting_link"
+            defaultValue={request.meeting_link || ''}
+            placeholder="Reusable Zoom/meeting link"
+            className="w-56 pl-8 pr-2 py-1.5 rounded-lg text-xs border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-300"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={savingMeeting === request.id}
+          className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 disabled:opacity-50"
+        >
+          <Save size={12} /> Save Zoom
+        </button>
+        {request.meeting_link && (
+          <a
+            href={request.meeting_link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+          >
+            <ExternalLink size={12} /> Join
+          </a>
+        )}
+      </form>
+    )
   }
 
   const pendingIncoming = incomingRequests.filter(r => r.status === 'pending').length
@@ -440,6 +498,7 @@ export default function SkillSwap() {
                           💬 Connect on Messages
                         </button>
                       )}
+                      {renderMeetingTools(r)}
                     </div>
                   </div>
                 ))}
@@ -496,6 +555,7 @@ export default function SkillSwap() {
                           💬 Message
                         </button>
                       )}
+                      {renderMeetingTools(r)}
                     </div>
                   </div>
                 ))}

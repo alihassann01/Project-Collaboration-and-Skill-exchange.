@@ -55,9 +55,14 @@ CREATE TABLE IF NOT EXISTS projects (
     deadline DATE NULL,
     type ENUM('remote','onsite','hybrid') DEFAULT 'remote',
     duration ENUM('less_1_month','1_3_months','3_6_months','ongoing') DEFAULT '1_3_months',
-    status ENUM('open','in_progress','completed','closed') DEFAULT 'open',
+    status ENUM('open','in_progress','delivered','reviewing','revision_requested','completed','closed') DEFAULT 'open',
     hired_student_id BIGINT UNSIGNED NULL,
     completed_at TIMESTAMP NULL,
+    delivery_file_path VARCHAR(500) NULL,
+    delivery_original_name VARCHAR(255) NULL,
+    delivered_at TIMESTAMP NULL,
+    reviewed_at TIMESTAMP NULL,
+    revision_note TEXT NULL,
     views INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -74,12 +79,71 @@ CREATE TABLE IF NOT EXISTS applications (
     proposed_budget DECIMAL(10,2) NULL,
     status ENUM('pending','approved','rejected','withdrawn') DEFAULT 'pending',
     employer_note TEXT NULL,
+    meeting_link VARCHAR(500) NULL,
     accepted_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_application (project_id, student_id),
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS project_payment_details (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    project_id BIGINT UNSIGNED NOT NULL,
+    student_id BIGINT UNSIGNED NOT NULL,
+    method ENUM('easypaisa','jazzcash','bank') NOT NULL,
+    account_title VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(50) NULL,
+    bank_name VARCHAR(255) NULL,
+    account_number VARCHAR(100) NULL,
+    iban VARCHAR(100) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_project_payment_details (project_id),
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS project_payments (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    project_id BIGINT UNSIGNED NOT NULL,
+    employer_id BIGINT UNSIGNED NOT NULL,
+    student_id BIGINT UNSIGNED NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    method ENUM('easypaisa','jazzcash','bank') NOT NULL,
+    bank_name VARCHAR(255) NULL,
+    account_title VARCHAR(255) NULL,
+    account_number VARCHAR(100) NULL,
+    iban VARCHAR(100) NULL,
+    phone_number VARCHAR(50) NULL,
+    transaction_reference VARCHAR(255) NOT NULL,
+    receipt_path VARCHAR(500) NOT NULL,
+    receipt_original_name VARCHAR(255) NULL,
+    note TEXT NULL,
+    status ENUM('submitted','confirmed','disputed') DEFAULT 'submitted',
+    dispute_note TEXT NULL,
+    submitted_at TIMESTAMP NULL,
+    confirmed_at TIMESTAMP NULL,
+    disputed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_project_payments_project (project_id),
+    INDEX idx_project_payments_student (student_id),
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (employer_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    token_hash VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_password_resets_token (token_hash),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS project_milestones (
@@ -113,6 +177,7 @@ CREATE TABLE IF NOT EXISTS swap_requests (
     swap_id BIGINT UNSIGNED NOT NULL,
     message TEXT NULL,
     status ENUM('pending','accepted','rejected') DEFAULT 'pending',
+    meeting_link VARCHAR(500) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -147,14 +212,14 @@ CREATE TABLE IF NOT EXISTS ratings (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     from_user_id BIGINT UNSIGNED NOT NULL,
     to_user_id BIGINT UNSIGNED NOT NULL,
-    project_id BIGINT UNSIGNED NOT NULL,
+    project_id BIGINT UNSIGNED NULL DEFAULT NULL,
     score TINYINT UNSIGNED NOT NULL,
     review TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY unique_rating (from_user_id, to_user_id, project_id),
     FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS notifications (

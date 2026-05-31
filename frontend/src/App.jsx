@@ -1,12 +1,24 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Navbar from './components/Navbar'
+import PublicFooter from './components/PublicFooter'
+import ScrollToAnchor from './components/ScrollToAnchor'
 import Spinner from './components/ui/Spinner'
 
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import ForgotPassword from './pages/auth/ForgotPassword'
+import ResetPassword from './pages/auth/ResetPassword'
 import Dashboard from './pages/dashboard/Dashboard'
+import {
+  PublicHome,
+  PublicAbout,
+  PublicProjectWorkflow,
+  PublicSkillSwapInfo,
+  PublicForStudents,
+  PublicForEmployers,
+} from './pages/public/PublicPages'
 import ProjectList from './pages/projects/ProjectList'
 import ProjectDetail from './pages/projects/ProjectDetail'
 import CreateProject from './pages/projects/CreateProject'
@@ -35,8 +47,18 @@ function GuestRoute({ children }) {
   return children
 }
 
+const publicFooterPaths = [
+  '/',
+  '/about',
+  '/project-workflow',
+  '/skill-swap-info',
+  '/for-students',
+  '/for-employers',
+]
+
 function AppRoutes() {
-  const { loading } = useAuth()
+  const { loading, user } = useAuth()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -49,25 +71,35 @@ function AppRoutes() {
     )
   }
 
+  const showPublicFooter = !user && publicFooterPaths.includes(location.pathname)
+
   return (
     <div className="min-h-screen bg-slate-50">
+      <ScrollToAnchor />
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Routes>
           {/* Root */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <PublicHome />} />
 
           {/* Public */}
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/projects" element={<ProjectList />} />
-          <Route path="/projects/:id" element={<ProjectDetail />} />
+          <Route path="/about" element={<PublicAbout />} />
+          <Route path="/project-workflow" element={<PublicProjectWorkflow />} />
+          <Route path="/skill-swap-info" element={<PublicSkillSwapInfo />} />
+          <Route path="/for-students" element={<PublicForStudents />} />
+          <Route path="/for-employers" element={<PublicForEmployers />} />
 
           {/* Guest-only */}
           <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
           <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+          <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+          <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
 
           {/* Any logged-in user */}
           <Route element={<ProtectedRoute />}>
+            <Route path="/projects" element={<ProjectList />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/skill-swap" element={<SkillSwap />} />
             {/* Nested messages routing — Conversation renders inside Messages via <Outlet> */}
             <Route path="/messages" element={<Messages />}>
@@ -102,6 +134,7 @@ function AppRoutes() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
+      {showPublicFooter && <PublicFooter />}
     </div>
   )
 }

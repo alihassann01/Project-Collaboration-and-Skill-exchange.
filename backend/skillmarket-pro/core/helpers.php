@@ -530,7 +530,9 @@ function requireRole(string ...$roles): object
 {
     $user = requireAuth();
     if (!in_array($user->role, $roles, true)) {
-        Response::error('Unauthorized. Required role: ' . implode(' or ', $roles), 401);
+        // Fix 9: Return 403 Forbidden (not 401) when user is authenticated but lacks the required role.
+        // 401 triggers the frontend Axios interceptor to redirect to login, which is incorrect here.
+        Response::error('Forbidden. Required role: ' . implode(' or ', $roles), 403);
     }
     return $user;
 }
@@ -608,19 +610,25 @@ function recommendedProjects(int $userId, int $limit = 5): array
 
 function recommendedStudents(array $requiredSkills, int $limit = 5): array
 {
+    // Fix 7: Single query with JOIN + GROUP_CONCAT replaces the N+1 loop
+    // that was firing one extra query per student (up to 61 queries total).
     $students = DB::query(
-        'SELECT u.*, COALESCE(AVG(r.score),0) AS avg_rating
+        "SELECT u.*,
+                COALESCE(AVG(r.score),0) AS avg_rating,
+                GROUP_CONCAT(DISTINCT us.skill_name SEPARATOR ',') AS skill_list
          FROM users u
          LEFT JOIN ratings r ON r.to_user_id = u.id
-         WHERE u.role = "student" AND u.is_active = 1
+         LEFT JOIN user_skills us ON us.user_id = u.id
+         WHERE u.role = 'student' AND u.is_active = 1
          GROUP BY u.id
-         ORDER BY avg_rating DESC LIMIT 60'
+         ORDER BY avg_rating DESC LIMIT 60"
     );
     $scored = [];
     foreach ($students as $s) {
-        $skills = array_column(DB::query('SELECT skill_name FROM user_skills WHERE user_id = ?', [$s->id]), 'skill_name');
+        $skills = $s->skill_list ? array_filter(array_map('trim', explode(',', $s->skill_list))) : [];
         $s->match_score = skillMatchScore($skills, $requiredSkills);
         $s->skills = $skills;
+        unset($s->skill_list);
         $scored[] = $s;
     }
     usort($scored, fn($a,$b) => $b->match_score - $a->match_score);

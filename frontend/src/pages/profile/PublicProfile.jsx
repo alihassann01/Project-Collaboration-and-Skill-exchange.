@@ -15,6 +15,20 @@ function normalizeUrl(url) {
   return 'https://' + url
 }
 
+// Construct full avatar URL from the DB value
+function getAvatarUrl(avatar) {
+  if (!avatar) return null
+  if (avatar.startsWith('http://') || avatar.startsWith('https://')) return avatar
+  const apiUrl = import.meta.env.VITE_API_URL || ''
+  let storageBase = apiUrl ? apiUrl.replace(/\/api\/?$/, '') : ''
+  if (!storageBase) {
+    storageBase = window.location.port === '5173'
+      ? 'http://localhost/skillmarket-pro'
+      : `${window.location.origin}/skillmarket-pro`
+  }
+  return storageBase + '/storage/' + avatar
+}
+
 function SkillTag({ label, index = 0 }) {
   return (
     <span className={chipColorClass(index)}>
@@ -126,7 +140,7 @@ function RatingsSection({ userId }) {
 }
 
 // Rating submission form
-function SubmitRatingForm({ userId, onSubmitted }) {
+function SubmitRatingForm({ userId, projectId = 0, onSubmitted }) {
   const [score, setScore] = useState(0)
   const [review, setReview] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -135,8 +149,7 @@ function SubmitRatingForm({ userId, onSubmitted }) {
     if (score < 1) { toast.error('Please select a star rating.'); return }
     setSubmitting(true)
     try {
-      // Use project_id = 0 as a sentinel — backend will verify connection
-      await submitRating(userId, 0, { score, review: review.trim() || null })
+      await submitRating(userId, projectId, { score, review: review.trim() || null })
       toast.success('Review submitted!')
       setScore(0)
       setReview('')
@@ -266,13 +279,22 @@ export default function PublicProfile() {
 
         <div className="px-6 pb-6 -mt-12 relative">
           <div className="flex items-end gap-5">
-            <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold flex-shrink-0 border-4 border-white shadow-lg ${
-              profile.role === 'student' ? 'bg-student-500'
-                : profile.role === 'employer' ? 'bg-employer-500'
-                : 'bg-amber-500'
-            }`}>
-              {getInitials(profile.name)}
-            </div>
+            {/* Avatar: show real image if available, else initials circle */}
+            {profile.avatar ? (
+              <img
+                src={getAvatarUrl(profile.avatar)}
+                alt={profile.name}
+                className="w-24 h-24 rounded-full object-cover flex-shrink-0 border-4 border-white shadow-lg"
+              />
+            ) : (
+              <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold flex-shrink-0 border-4 border-white shadow-lg ${
+                profile.role === 'student' ? 'bg-student-500'
+                  : profile.role === 'employer' ? 'bg-employer-500'
+                  : 'bg-amber-500'
+              }`}>
+                {getInitials(profile.name)}
+              </div>
+            )}
             <div className="flex-1 min-w-0 pb-1">
               <div className="flex items-start justify-between gap-3">
                 <div>

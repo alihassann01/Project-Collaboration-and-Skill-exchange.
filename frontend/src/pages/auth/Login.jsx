@@ -125,9 +125,9 @@ export default function Login() {
                   leftIcon={Lock}
                   placeholder="••••••••" value={form.password} onChange={set('password')} error={errors.password} />
                 <div className="text-right mt-1.5">
-                  <span className="text-xs text-slate-400 hover:text-brand-600 cursor-pointer transition-colors">
+                  <Link to="/forgot-password" className="text-xs text-slate-400 hover:text-brand-600 transition-colors">
                     Forgot password?
-                  </span>
+                  </Link>
                 </div>
               </div>
               <Button type="submit" loading={loading} className="w-full mt-1 py-3 text-base">

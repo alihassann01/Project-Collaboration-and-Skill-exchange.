@@ -18,16 +18,16 @@ export default function StatCard({ title, value, icon: Icon, color = 'blue', tre
   const c = colorMap[color] || colorMap.blue
 
   return (
-    <div className={`bg-white rounded-2xl shadow-card border border-slate-100 p-5 flex items-center gap-4 card-hover group relative overflow-hidden ${className}`}>
-      {/* Subtle top gradient bar */}
-      <div className={`absolute top-0 left-0 right-0 h-0.5 ${c.bar} opacity-80`} />
+    <div className={`bg-white/95 rounded-2xl shadow-card border border-white/80 p-5 flex items-center gap-4 card-hover group relative overflow-hidden backdrop-blur-sm ${className}`}>
+      <div className={`absolute top-0 left-0 right-0 h-1 ${c.bar} opacity-80`} />
+      <div className={`absolute inset-y-0 right-0 w-16 ${c.bg} opacity-40 transition-transform duration-300 group-hover:scale-x-125 origin-right`} />
 
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${c.bg} group-hover:scale-110 transition-transform duration-200`}>
+      <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${c.bg} ring-1 ring-white/80 group-hover:scale-110 transition-transform duration-200`}>
         {Icon && <Icon size={22} className={c.icon} strokeWidth={1.8} />}
       </div>
 
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{title}</p>
+      <div className="relative min-w-0 flex-1">
+        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider leading-snug">{title}</p>
         <div className="flex items-baseline gap-2 mt-0.5">
           <p className={`text-2xl font-display font-bold leading-tight ${c.numClass || 'text-slate-900'}`}>
             {value ?? '—'}
