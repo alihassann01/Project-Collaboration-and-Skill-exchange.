@@ -4,6 +4,14 @@ vendor/
 
 # Build output
 frontend/dist/
+generated_figures/
+flex_design/
+scripts/
+
+# Documentation and presentation artifacts
+README.md
+*.docx
+figures_guide.html
 
 # Environment files
 .env
