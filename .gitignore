@@ -8,6 +8,14 @@ generated_figures/
 flex_design/
 scripts/
 
+# Source folders intentionally kept out of the CV/demo repo
+frontend/src/
+backend/skillmarket-pro/controllers/
+backend/skillmarket-pro/core/
+backend/skillmarket-pro/database/
+backend/skillmarket-pro/index.php
+backend/skillmarket-pro/config.php
+
 # Documentation and presentation artifacts
 README.md
 *.docx
